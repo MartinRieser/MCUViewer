@@ -8,6 +8,13 @@
 #include "IDebugProbe.hpp"
 #include "stlink.h"
 
+#ifdef __APPLE__
+extern "C" {
+#include "read_write.h"
+#include "usb.h"
+}
+#endif
+
 #include "spdlog/spdlog.h"
 
 class StlinkDebugProbe : public IDebugProbe

@@ -7,6 +7,18 @@
 #include "spdlog/spdlog.h"
 #include "stlink.h"
 
+#ifdef __APPLE__
+extern "C" {
+#include "usb.h"
+#include "read_write.h"
+}
+// Function name compatibility for Homebrew stlink
+#define stlink_trace_enable _stlink_usb_enable_trace
+#define stlink_trace_disable _stlink_usb_disable_trace
+#define stlink_trace_read _stlink_usb_read_trace
+// stlink_write_debug32 already exists in read_write.h
+#endif
+
 class StlinkTraceProbe : public ITraceProbe
 {
    public:

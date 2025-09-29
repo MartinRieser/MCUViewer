@@ -18,8 +18,10 @@
 #include "IDebugProbe.hpp"
 #include "IFileHandler.hpp"
 #include "ImguiPlugins.hpp"
+#ifdef JLINK_AVAILABLE
 #include "JlinkDebugProbe.hpp"
 #include "JlinkTraceProbe.hpp"
+#endif
 #include "Plot.hpp"
 #include "PlotGroupHandler.hpp"
 #include "Popup.hpp"
@@ -34,6 +36,10 @@ class Gui
    public:
 	Gui(PlotHandler* plotHandler, VariableHandler* variableHandler, ConfigHandler* configHandler, PlotGroupHandler* plotGroupHandler, IFileHandler* fileHandler, PlotHandler* tracePlotHandler, ViewerDataHandler* viewerDataHandler, TraceDataHandler* traceDataHandler, std::atomic<bool>& done, std::mutex* mtx, spdlog::logger* logger, std::string& projectPath);
 	~Gui();
+
+#ifdef __APPLE__
+	void runMainLoop();
+#endif
 
    private:
 	static constexpr bool showDemoWindow = false;
@@ -59,13 +65,17 @@ class Gui
 	TraceDataHandler* traceDataHandler;
 
 	std::shared_ptr<IDebugProbe> stlinkProbe;
+#ifdef JLINK_AVAILABLE
 	std::shared_ptr<IDebugProbe> jlinkProbe;
+#endif
 	std::shared_ptr<IDebugProbe> debugProbeDevice;
 	std::vector<std::string> devicesList{};
 	const std::string noDevices = "No debug probes found!";
 
 	std::shared_ptr<ITraceProbe> stlinkTraceProbe;
+#ifdef JLINK_AVAILABLE
 	std::shared_ptr<ITraceProbe> jlinkTraceProbe;
+#endif
 	std::shared_ptr<ITraceProbe> traceProbeDevice;
 
 	std::atomic<bool>& done;
@@ -88,6 +98,10 @@ class Gui
 	std::shared_ptr<PlotEditWindow> plotEditWindow;
 	std::shared_ptr<VariableTableWindow> variableTable;
 	std::shared_ptr<PlotsTree> plotsTree;
+
+#ifdef __APPLE__
+	std::string externalProjectPath;
+#endif
 
    private:
 	void mainThread(std::string externalPath);

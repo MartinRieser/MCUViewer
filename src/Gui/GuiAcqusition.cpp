@@ -81,7 +81,11 @@ void Gui::drawDebugProbes()
 
 		if (probeSettings.debugProbe == 1)
 		{
+#ifdef JLINK_AVAILABLE
 			debugProbeDevice = jlinkProbe;
+#else
+			debugProbeDevice = stlinkProbe; // Fallback to STLink when JLink unavailable
+#endif
 			shouldListDevices = true;
 		}
 		else
@@ -265,7 +269,11 @@ void Gui::drawTraceProbes()
 
 		if (probeSettings.debugProbe == 1)
 		{
+#ifdef JLINK_AVAILABLE
 			traceProbeDevice = jlinkTraceProbe;
+#else
+			traceProbeDevice = stlinkTraceProbe; // Fallback to STLink when JLink unavailable
+#endif
 			shouldListDevices = true;
 		}
 		else

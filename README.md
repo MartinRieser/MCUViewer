@@ -130,8 +130,49 @@ After a successful build, copy the `./third_party/stlink/chips` directory to whe
     - `cmake .. -G"MinGW Makefiles`
     - `mingw32-make.exe -j8`
 
-After a successful build, copy the `./third_party/stlink/chips` directory to where the binary is located. Otherwise the STlink will not detect your STM32 target. 
+After a successful build, copy the `./third_party/stlink/chips` directory to where the binary is located. Otherwise the STlink will not detect your STM32 target.
 
+### macOS (Apple Silicon/ARM64):
+MCUViewer supports native ARM64 builds on Apple Silicon Macs using Homebrew dependencies.
+
+#### Prerequisites:
+1. Install [Homebrew](https://brew.sh) if you haven't already
+2. Install required dependencies:
+   ```bash
+   brew install cmake libusb glfw stlink
+   ```
+
+#### Building:
+1. Clone the repository and navigate to the project directory
+2. Create and configure the build:
+   ```bash
+   mkdir build
+   cd build
+   cmake ..
+   make -j8
+   ```
+
+#### JLink Support (Optional):
+For SEGGER JLink probe support, install the official JLink software:
+1. Download the latest version from [SEGGER's JLink page](https://www.segger.com/downloads/jlink/)
+2. Select "J-Link Software and Documentation Pack for macOS, 64-bit Apple Silicon Installer"
+3. Install and rebuild MCUViewer:
+   ```bash
+   make clean && make -j8
+   ```
+4. Verify JLink support is enabled:
+   ```
+   -- Found JLink library: /Applications/SEGGER/JLink_V*/libjlinkarm.dylib
+   -- JLink support enabled for macOS
+   ```
+
+#### Notes:
+- **STLink Support**: Full native ARM64 support using Homebrew's STLink library (v1.8.0+)
+- **JLink Support**: Full native ARM64 support when SEGGER JLink is installed. STLink is used as fallback when JLink is not available.
+- **Performance**: Native ARM64 compilation provides optimal performance without Rosetta translation
+- **Dependencies**: All dependencies are automatically detected and linked from Homebrew installations
+
+The built `MCUViewer` binary will be a native ARM64 executable optimized for Apple Silicon.
 
 ## Why
 I'm working in the motor control industry where it is crucial to visualize some of the process data in real-time. Since the beginning, I have been working with [STMStudio](https://www.st.com/en/development-tools/stm-studio-stm32.html), which is, or rather was a great tool. Unfortunately, ST stopped supporting it which means there are some annoying bugs, and it doesn't work well with mangled c++ object names. Also, it works only on Windows and with STM32 microcontrollers which is a big downside. If you've ever used it you probably see how big of an inspiration it was for creating MCUViewer :) ST's other project in this area - [Cube Monitor](https://www.st.com/en/development-tools/stm32cubemonitor.html) - has, in my opinion, too much overhead on adding variables, plots and writing values. I think it's designed for creating dashboards, and thus it serves a very different purpose. On top of that, I think the plot manipulation is much worse compared to STMStudio or MCUViewer. 

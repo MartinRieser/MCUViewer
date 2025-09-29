@@ -55,10 +55,15 @@ int main(int argc, char** argv)
 
 	Gui gui(&plotHandler, &variableHandler, &configHandler, &plotGroupHandler, &fileHandler, &tracePlotHandler, &viewerDataHandler, &traceDataHandler, done, &mtx, loggerPtr, projectPath);
 
+#ifdef __APPLE__
+	// On macOS, run GUI on main thread
+	gui.runMainLoop();
+#else
 	while (!done)
 	{
 		std::this_thread::sleep_for(std::chrono::seconds(1));
 	}
+#endif
 	logger->info("Closing MCUViewer!");
 	logger->flush();
 	spdlog::shutdown();

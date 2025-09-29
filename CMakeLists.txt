@@ -89,10 +89,59 @@ if(UNIX)
         find_package(OpenGL REQUIRED)
         find_package(GLUT REQUIRED)
 
-        # TODO distinguish between ARM and x86 */
-        set(STLINK_MACOS ${CMAKE_CURRENT_SOURCE_DIR}/third_party/stlink/lib/macos/libstlink.a)
+        # Use Homebrew stlink for both ARM64 and x86_64
+        if(CMAKE_SYSTEM_PROCESSOR STREQUAL "arm64")
+            # Apple Silicon - use Homebrew stlink
+            set(STLINK_MACOS /opt/homebrew/lib/libstlink.a)
+            set(STLINK_INCLUDE_DIR /opt/homebrew/include/stlink)
+        else()
+            # Intel Mac - try Homebrew first, fallback to bundled
+            if(EXISTS /usr/local/lib/libstlink.a)
+                set(STLINK_MACOS /usr/local/lib/libstlink.a)
+                set(STLINK_INCLUDE_DIR /usr/local/include/stlink)
+            else()
+                set(STLINK_MACOS ${CMAKE_CURRENT_SOURCE_DIR}/third_party/stlink/lib/macos/libstlink.a)
+                set(STLINK_INCLUDE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/third_party/stlink/inc/)
+            endif()
+        endif()
+
+        # JLink support for macOS - check for system installation
+        set(JLINK_MACOS_FOUND FALSE)
+
+        # Check for SEGGER JLink installation (common paths)
+        file(GLOB JLINK_POSSIBLE_PATHS "/Applications/SEGGER/JLink_V*/libjlinkarm.dylib")
+        if(JLINK_POSSIBLE_PATHS)
+            list(GET JLINK_POSSIBLE_PATHS 0 JLINK_MACOS_LIB)
+            get_filename_component(JLINK_MACOS_DIR ${JLINK_MACOS_LIB} DIRECTORY)
+            set(JLINK_MACOS ${JLINK_MACOS_LIB})
+            set(JLINK_MACOS_INCLUDE_DIR ${JLINK_MACOS_DIR})
+            set(JLINK_MACOS_FOUND TRUE)
+            message(STATUS "Found JLink library: ${JLINK_MACOS}")
+        # Check for Homebrew JLink installation
+        elseif(EXISTS "/opt/homebrew/lib/libjlinkarm.dylib")
+            set(JLINK_MACOS /opt/homebrew/lib/libjlinkarm.dylib)
+            set(JLINK_MACOS_INCLUDE_DIR /opt/homebrew/include)
+            set(JLINK_MACOS_FOUND TRUE)
+            message(STATUS "Found Homebrew JLink library: ${JLINK_MACOS}")
+        elseif(EXISTS "/usr/local/lib/libjlinkarm.dylib")
+            set(JLINK_MACOS /usr/local/lib/libjlinkarm.dylib)
+            set(JLINK_MACOS_INCLUDE_DIR /usr/local/include)
+            set(JLINK_MACOS_FOUND TRUE)
+            message(STATUS "Found system JLink library: ${JLINK_MACOS}")
+        else()
+            message(STATUS "JLink library not found - JLink support will be disabled")
+        endif()
+
+        # Enable JLink support if library was found
+        if(FALSE) # Temporarily disable JLink
+            add_compile_definitions(JLINK_AVAILABLE)
+            message(STATUS "JLink support enabled for macOS")
+        else()
+            message(STATUS "JLink support disabled for macOS - install SEGGER JLink to enable")
+        endif()
     else()
         set(STLINK_LINUX ${CMAKE_CURRENT_SOURCE_DIR}/third_party/stlink/lib/linux/libstlink.a)
+        set(STLINK_INCLUDE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/third_party/stlink/inc/)
     endif()
 endif()
 
@@ -120,7 +169,6 @@ set(PROJECT_SOURCES
     ${CMAKE_CURRENT_SOURCE_DIR}/src/Gui/GuiAcqusition.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/src/Gui/GuiHelper.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/src/MemoryReader/StlinkDebugProbe.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/src/MemoryReader/JlinkDebugProbe.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/src/Plot/Plot.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/src/Variable/Variable.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/src/MovingAverage/MovingAverage.cpp
@@ -131,12 +179,18 @@ set(PROJECT_SOURCES
     ${CMAKE_CURRENT_SOURCE_DIR}/src/PlotHandler/PlotHandler.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/src/TraceReader/TraceReader.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/src/TraceReader/StlinkTraceProbe.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/src/TraceReader/JlinkTraceProbe.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/src/GdbParser/GdbParser.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/src/CSVStreamer/CSVStreamer.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/src/VariableHandler/VariableHandler.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/src/DataHandler/ViewerDataHandler.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/src/DataHandler/TraceDataHandler.cpp)
+
+# Add JLink support only on non-Apple platforms for now
+if(NOT APPLE)
+    list(APPEND PROJECT_SOURCES
+        ${CMAKE_CURRENT_SOURCE_DIR}/src/MemoryReader/JlinkDebugProbe.cpp
+        ${CMAKE_CURRENT_SOURCE_DIR}/src/TraceReader/JlinkTraceProbe.cpp)
+endif()
 
 set(IMGUI_SOURCES
     ${CMAKE_CURRENT_SOURCE_DIR}/third_party/imgui/imgui.cpp
@@ -207,7 +261,7 @@ target_include_directories(${EXECUTABLE} PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/src/DataHandler)
 
 target_include_directories(${EXECUTABLE} SYSTEM PRIVATE
-    ${CMAKE_CURRENT_SOURCE_DIR}/third_party/stlink/inc/
+    ${STLINK_INCLUDE_DIR}
     ${JLINK_INCLUDE_DIR}
     ${LIBUSB_INCLUDE_DIR}
     ${CMAKE_CURRENT_SOURCE_DIR}/third_party/imgui/backends/
@@ -222,7 +276,11 @@ target_include_directories(${EXECUTABLE} SYSTEM PRIVATE
 
 if(APPLE)
     include_directories(${OPENGL_INCLUDE_DIRS} ${GLUT_INCLUDE_DIRS} ${STLINK_INCLUDE_DIRS})
-    target_link_libraries(${EXECUTABLE} ${STLINK_MACOS} ${LIBUSB_LIBRARY} ${OPENGL_LIBRARIES} ${GLUT_LIBRARY} spdlog::spdlog pthread dl glfw nfd)
+    if(FALSE) # Force disable JLink linking
+        target_link_libraries(${EXECUTABLE} ${STLINK_MACOS} ${JLINK_MACOS} ${LIBUSB_LIBRARY} ${OPENGL_LIBRARIES} ${GLUT_LIBRARY} spdlog::spdlog pthread dl glfw nfd)
+    else()
+        target_link_libraries(${EXECUTABLE} ${STLINK_MACOS} ${LIBUSB_LIBRARY} ${OPENGL_LIBRARIES} ${GLUT_LIBRARY} spdlog::spdlog pthread dl glfw nfd)
+    endif()
 elseif(UNIX)
     target_link_libraries(${EXECUTABLE} ${STLINK_LINUX} ${LIBUSB_LIBRARY} ${JLINK_LINUX} spdlog::spdlog pthread dl GL glfw nfd)
 elseif(WIN32)

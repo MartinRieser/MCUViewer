@@ -3,6 +3,7 @@
 #include <imgui.h>
 #include <unistd.h>
 
+#include <algorithm>
 #include <future>
 #include <set>
 #include <sstream>
@@ -22,7 +23,12 @@
 
 Gui::Gui(PlotHandler* plotHandler, VariableHandler* variableHandler, ConfigHandler* configHandler, PlotGroupHandler* plotGroupHandler, IFileHandler* fileHandler, PlotHandler* tracePlotHandler, ViewerDataHandler* viewerDataHandler, TraceDataHandler* traceDataHandler, std::atomic<bool>& done, std::mutex* mtx, spdlog::logger* logger, std::string& projectPath) : plotHandler(plotHandler), variableHandler(variableHandler), configHandler(configHandler), plotGroupHandler(plotGroupHandler), fileHandler(fileHandler), tracePlotHandler(tracePlotHandler), viewerDataHandler(viewerDataHandler), traceDataHandler(traceDataHandler), done(done), mtx(mtx), logger(logger)
 {
+#ifndef __APPLE__
 	threadHandle = std::thread(&Gui::mainThread, this, projectPath);
+#else
+	// Store project path for later use in runMainLoop
+	this->externalProjectPath = projectPath;
+#endif
 	plotEditWindow = std::make_shared<PlotEditWindow>(plotHandler, plotGroupHandler, variableHandler);
 	plotsTree = std::make_shared<PlotsTree>(viewerDataHandler, plotHandler, plotGroupHandler, variableHandler, plotEditWindow, fileHandler, logger);
 	variableTable = std::make_shared<VariableTableWindow>(viewerDataHandler, plotHandler, variableHandler, &projectElfPath, &projectConfigPath, logger);
@@ -36,8 +42,10 @@ Gui::Gui(PlotHandler* plotHandler, VariableHandler* variableHandler, ConfigHandl
 
 Gui::~Gui()
 {
+#ifndef __APPLE__
 	if (threadHandle.joinable())
 		threadHandle.join();
+#endif
 }
 
 static void glfw_error_callback(int error, const char* description)
@@ -59,6 +67,18 @@ void Gui::mainThread(std::string externalPath)
 	if (!glfwInit())
 		return;
 
+	// Set OpenGL context version before creating window
+	glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
+	glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
+#ifdef __APPLE__
+	// Required on macOS for OpenGL 3.3+
+	glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
+	glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE);
+	// Additional macOS-specific hints for better interaction
+	glfwWindowHint(GLFW_COCOA_RETINA_FRAMEBUFFER, GLFW_FALSE);
+	glfwWindowHint(GLFW_SCALE_TO_MONITOR, GLFW_FALSE);
+#endif
+
 	GLFWwindow* window = glfwCreateWindow(1500, 1000, (std::string("MCUViewer | ") + projectConfigPath).c_str(), NULL, NULL);
 	if (window == NULL)
 		return;
@@ -69,10 +89,15 @@ void Gui::mainThread(std::string externalPath)
 	ImGui::CreateContext();
 	ImPlot::CreateContext();
 
-	GuiHelper::contentScale = getContentScale(window);
+	// Set contentScale to 1.0 for macOS to avoid scaling issues
+#ifdef __APPLE__
+	GuiHelper::contentScale = 1.0f;
+#else
+	GuiHelper::contentScale = std::min(getContentScale(window), 1.5f);
+#endif
 
 	ImFontConfig cfg;
-	cfg.SizePixels = 13.0f * GuiHelper::contentScale;
+	cfg.SizePixels = 13.0f;
 
 	ImGuiIO& io = ImGui::GetIO();
 	io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;
@@ -83,25 +108,34 @@ void Gui::mainThread(std::string externalPath)
 	ImGui::StyleColorsDark();
 	ImPlot::StyleColorsDark();
 
+	// Don't scale sizes on macOS - causes interaction issues
+#ifndef __APPLE__
 	ImGui::GetStyle().ScaleAllSizes(GuiHelper::contentScale);
+#endif
 	ImGui::GetStyle().Colors[ImGuiCol_PopupBg] = ImVec4(0.1f, 0.1f, 0.1f, 1.0f);
 
-	glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
-	glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 0);
 	ImGui_ImplGlfw_InitForOpenGL(window, true);
+#ifdef __APPLE__
+	ImGui_ImplOpenGL3_Init("#version 330 core");
+#else
 	ImGui_ImplOpenGL3_Init("#version 130");
+#endif
 
 	ImGuiWindowClass window_class;
 	window_class.DockNodeFlagsOverrideSet = ImGuiDockNodeFlags_NoTabBar;
 
 	fileHandler->init();
 
+#ifdef JLINK_AVAILABLE
 	jlinkProbe = std::make_shared<JlinkDebugProbe>(logger);
+#endif
 	stlinkProbe = std::make_shared<StlinkDebugProbe>(logger);
 	debugProbeDevice = stlinkProbe;
 	viewerDataHandler->setDebugProbe(debugProbeDevice);
 
+#ifdef JLINK_AVAILABLE
 	jlinkTraceProbe = std::make_shared<JlinkTraceProbe>(logger);
+#endif
 	stlinkTraceProbe = std::make_shared<StlinkTraceProbe>(logger);
 	traceProbeDevice = stlinkTraceProbe;
 	traceDataHandler->setDebugProbe(traceProbeDevice);
@@ -322,8 +356,8 @@ void Gui::drawAcqusitionSettingsWindow(ActiveViewType type)
 		ImGui::OpenPopup("Acqusition Settings");
 
 	ImGui::SetNextWindowPos(ImGui::GetMainViewport()->GetCenter(), ImGuiCond_Appearing, ImVec2(0.5f, 0.5f));
-	ImGui::SetNextWindowSize(ImVec2(950 * GuiHelper::contentScale, 600 * GuiHelper::contentScale));
-	if (ImGui::BeginPopupModal("Acqusition Settings", &showAcqusitionSettingsWindow, 0))
+	ImGui::SetNextWindowSize(ImVec2(700, 500), ImGuiCond_Appearing);
+	if (ImGui::BeginPopupModal("Acqusition Settings", &showAcqusitionSettingsWindow, ImGuiWindowFlags_AlwaysAutoResize))
 	{
 		if (type == ActiveViewType::VarViewer)
 			acqusitionSettingsViewer();
@@ -460,14 +494,26 @@ bool Gui::openProject(std::string externalPath)
 		/* TODO refactor */
 		devicesList.clear();
 		if (viewerDataHandler->getProbeSettings().debugProbe == 1)
+		{
+#ifdef JLINK_AVAILABLE
 			debugProbeDevice = jlinkProbe;
+#else
+			debugProbeDevice = stlinkProbe; // Fallback to STLink when JLink unavailable
+#endif
+		}
 		else
 			debugProbeDevice = stlinkProbe;
 
 		viewerDataHandler->setDebugProbe(debugProbeDevice);
 
 		if (traceDataHandler->getProbeSettings().debugProbe == 1)
+		{
+#ifdef JLINK_AVAILABLE
 			traceProbeDevice = jlinkTraceProbe;
+#else
+			traceProbeDevice = stlinkTraceProbe; // Fallback to STLink when JLink unavailable
+#endif
+		}
 		else
 			traceProbeDevice = stlinkTraceProbe;
 
@@ -553,3 +599,12 @@ void Gui::showChangeFormatPopup(const char* text, Plot& plt, const std::string& 
 
 	plt.setSeriesDisplayFormat(name, static_cast<Plot::displayFormat>(format));
 }
+
+#ifdef __APPLE__
+void Gui::runMainLoop()
+{
+	// Call mainThread directly on the main thread for macOS
+	mainThread(externalProjectPath);
+}
+#endif
+
