@@ -39,3 +39,6 @@ test/MCUViewer_test/.settings/
 
 # Log files
 *.csv
+
+# Test binaries
+test/Uart/UartProtocolTest
