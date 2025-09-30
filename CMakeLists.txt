@@ -5,6 +5,8 @@ if(MAKE_TESTS)
     return()
 endif()
 
+option(UART_SUPPORT "Enable UART debug probe support" ON)
+
 if(NOT DEFINED PLATFORM)
     set(PLATFORM "native")
     message("Compiling for native system")
@@ -138,6 +140,15 @@ set(PROJECT_SOURCES
     ${CMAKE_CURRENT_SOURCE_DIR}/src/DataHandler/ViewerDataHandler.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/src/DataHandler/TraceDataHandler.cpp)
 
+# UART support sources (conditional)
+if(UART_SUPPORT)
+    message("UART debug probe support: ENABLED")
+    list(APPEND PROJECT_SOURCES
+        ${CMAKE_CURRENT_SOURCE_DIR}/src/MemoryReader/Uart/UartProtocol.cpp)
+else()
+    message("UART debug probe support: DISABLED")
+endif()
+
 set(IMGUI_SOURCES
     ${CMAKE_CURRENT_SOURCE_DIR}/third_party/imgui/imgui.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/third_party/imgui/imgui_demo.cpp
@@ -189,6 +200,7 @@ target_compile_definitions(${EXECUTABLE}
 target_include_directories(${EXECUTABLE} PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/src/Gui
     ${CMAKE_CURRENT_SOURCE_DIR}/src/MemoryReader
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/MemoryReader/Uart
     ${CMAKE_CURRENT_SOURCE_DIR}/src/Plot
     ${CMAKE_CURRENT_SOURCE_DIR}/src/ScrollingBuffer
     ${CMAKE_CURRENT_SOURCE_DIR}/src/MovingAverage
