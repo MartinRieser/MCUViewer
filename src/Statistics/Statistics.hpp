@@ -1,3 +1,11 @@
+/**
+ * @file Statistics.hpp
+ * @brief Statistical analysis functions for plot data in MCUViewer
+ *
+ * Provides statistical calculations for both analog and digital signal analysis
+ * including min/max, mean, standard deviation, and frequency analysis.
+ */
+
 #ifndef STATISTICS_HPP_
 #define STATISTICS_HPP_
 
@@ -14,27 +22,60 @@
 #define TEST_FRIENDS_STATISTICS
 #endif
 
+/**
+ * @class Statistics
+ * @brief Static utility class for statistical analysis of plot data
+ *
+ * Provides two main analysis modes:
+ * - Analog signal statistics (min, max, mean, stddev)
+ * - Digital signal statistics (pulse width, frequency analysis)
+ *
+ * All methods are static and operate on time-series data within a specified range.
+ *
+ * @note Uses marker-based range selection for analysis
+ * @note Designed for real-time signal analysis on circular buffers
+ */
 class Statistics
 {
    public:
+	/**
+	 * @struct AnalogResults
+	 * @brief Results structure for analog signal statistics
+	 */
 	struct AnalogResults
 	{
-		double min;
-		double max;
-		double mean;
-		double stddev;
+		double min;     /**< Minimum value in range */
+		double max;     /**< Maximum value in range */
+		double mean;    /**< Average value in range */
+		double stddev;  /**< Standard deviation in range */
 	};
 
+	/**
+	 * @struct DigitalResults
+	 * @brief Results structure for digital signal statistics
+	 */
 	struct DigitalResults
 	{
-		double Lmin;
-		double Lmax;
-		double Hmin;
-		double Hmax;
-		double fmin;
-		double fmax;
+		double Lmin;  /**< Minimum low pulse width */
+		double Lmax;  /**< Maximum low pulse width */
+		double Hmin;  /**< Minimum high pulse width */
+		double Hmax;  /**< Maximum high pulse width */
+		double fmin;  /**< Minimum frequency */
+		double fmax;  /**< Maximum frequency */
 	};
 
+	/**
+	 * @brief Calculates digital signal statistics within time range
+	 *
+	 * Analyzes digital waveform for pulse widths and frequencies.
+	 *
+	 * @param ser Plot series data to analyze
+	 * @param time Time buffer for X-axis
+	 * @param start Start time of analysis range
+	 * @param end End time of analysis range
+	 * @param results Output structure for results
+	 * @note Detects rising/falling edges and measures pulse characteristics
+	 */
 	static void calculateResults(Plot::Series* ser, ScrollingBuffer<double>* time, double start, double end, DigitalResults& results)
 	{
 		auto data = ser->buffer->getLinearData(time->getIndexFromvalue(start) + 1, time->getIndexFromvalue(end) + 1);
@@ -65,6 +106,18 @@ class Statistics
 		results.fmax = findmax(f);
 	}
 
+	/**
+	 * @brief Calculates analog signal statistics within time range
+	 *
+	 * Computes basic statistical measures for analog signals.
+	 *
+	 * @param ser Plot series data to analyze
+	 * @param time Time buffer for X-axis
+	 * @param start Start time of analysis range
+	 * @param end End time of analysis range
+	 * @param results Output structure for results
+	 * @note Accounts for sample-and-hold behavior (+1 offset)
+	 */
 	static void calculateResults(Plot::Series* ser, ScrollingBuffer<double>* time, double start, double end, AnalogResults& results)
 	{
 		/* + 1 is to account for the way sample is "held" for the entire duration of sample period */
@@ -78,6 +131,7 @@ class Statistics
    private:
 	TEST_FRIENDS_STATISTICS
 
+	/** @brief Finds minimum value in vector */
 	static double findmin(std::vector<double> data)
 	{
 		if (data.empty())
@@ -85,6 +139,7 @@ class Statistics
 		return *std::min_element(data.begin(), data.end());
 	}
 
+	/** @brief Finds maximum value in vector */
 	static double findmax(std::vector<double> data)
 	{
 		if (data.empty())
@@ -92,6 +147,7 @@ class Statistics
 		return *std::max_element(data.begin(), data.end());
 	}
 
+	/** @brief Calculates mean (average) of vector */
 	static double mean(std::vector<double> data)
 	{
 		if (data.empty())
@@ -99,6 +155,7 @@ class Statistics
 		return std::accumulate(data.begin(), data.end(), 0.0) / static_cast<double>(data.size());
 	}
 
+	/** @brief Calculates standard deviation of vector */
 	static double stddev(std::vector<double> data)
 	{
 		if (data.empty())
@@ -115,6 +172,18 @@ class Statistics
 		return std::sqrt(variance);
 	}
 
+	/**
+	 * @brief Converts digital signal into low/high pulse width vectors
+	 *
+	 * Analyzes digital waveform to extract pulse width information.
+	 *
+	 * @param time Time stamps for each sample
+	 * @param data Signal values (0 or 1)
+	 * @param Lvec Output vector of low pulse widths
+	 * @param Hvec Output vector of high pulse widths
+	 * @return true if successful, false if insufficient data
+	 * @note Finds first and last signal changes to avoid partial pulses
+	 */
 	static bool convertDigitalSeriesToVectors(std::vector<double> time, std::vector<double> data, std::vector<double>& Lvec, std::vector<double>& Hvec)
 	{
 		/* find the first and last signal change */

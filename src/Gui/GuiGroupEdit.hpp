@@ -1,3 +1,11 @@
+/**
+ * @file GuiGroupEdit.hpp
+ * @brief Plot group properties editor window for MCUViewer
+ *
+ * Provides a modal window for editing plot group properties,
+ * primarily the group name with uniqueness validation.
+ */
+
 #pragma once
 
 #include "GuiHelper.hpp"
@@ -6,13 +14,37 @@
 #include "Popup.hpp"
 #include "imgui.h"
 
+/**
+ * @class GroupEditWindow
+ * @brief Modal window for editing plot group properties
+ *
+ * This window allows users to:
+ * - Rename plot groups (with uniqueness validation)
+ * - View group configuration
+ *
+ * @note Changes are applied immediately to PlotGroupHandler
+ * @note Shows error popup for duplicate names
+ */
 class GroupEditWindow
 {
    public:
+	/**
+	 * @brief Constructs group edit window
+	 *
+	 * @param plotGroupHandler Handler for plot group management
+	 */
 	GroupEditWindow(PlotGroupHandler* plotGroupHandler) : plotGroupHandler(plotGroupHandler)
 	{
 	}
 
+	/**
+	 * @brief Draws the group edit modal window
+	 *
+	 * Renders modal popup with group editing controls. Should be called
+	 * every frame to handle window display and user input.
+	 *
+	 * @note Window automatically closes on "Done" button or Escape key
+	 */
 	void draw()
 	{
 		if (showGroupEditWindow)
@@ -38,11 +70,23 @@ class GroupEditWindow
 		}
 	}
 
+	/**
+	 * @brief Sets the group to be edited
+	 *
+	 * @param group Shared pointer to the plot group to edit
+	 * @note Call before showing window to specify which group to edit
+	 */
 	void setGroupToEdit(std::shared_ptr<PlotGroup> group)
 	{
 		editedGroup = group;
 	}
 
+	/**
+	 * @brief Sets the visibility state of the edit window
+	 *
+	 * @param state true to show window, false to hide
+	 * @note Tracks state changes for keyboard focus management
+	 */
 	void setShowGroupEditWindowState(bool state)
 	{
 		if (showGroupEditWindow != state)
@@ -50,6 +94,14 @@ class GroupEditWindow
 		showGroupEditWindow = state;
 	}
 
+	/**
+	 * @brief Draws the group settings controls
+	 *
+	 * Renders input field for group name with uniqueness validation.
+	 * Sets keyboard focus to name field when window first opens.
+	 *
+	 * @note Shows error popup for duplicate names
+	 */
 	void drawGroupEditSettings()
 	{
 		if (editedGroup == nullptr)
@@ -87,17 +139,24 @@ class GroupEditWindow
 
    private:
 	/**
-	 * @brief Text alignemnt in front of the input fields
+	 * @brief Text alignment width for form labels
 	 *
+	 * Number of characters to align label text to for uniform field layout
 	 */
 	static constexpr size_t alignment = 18;
 
+	/** @brief Flag indicating if window should be displayed */
 	bool showGroupEditWindow = false;
 
+	/** @brief Handler for plot group operations */
 	PlotGroupHandler* plotGroupHandler;
+
+	/** @brief Shared pointer to the group currently being edited */
 	std::shared_ptr<PlotGroup> editedGroup = nullptr;
 
+	/** @brief Popup for error messages (e.g., duplicate name) */
 	Popup popup;
 
+	/** @brief Flag indicating window state changed (for focus management) */
 	bool stateChanged = false;
 };

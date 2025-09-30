@@ -1,3 +1,11 @@
+/**
+ * @file GuiStatisticsWindow.hpp
+ * @brief Statistics display window for plot analysis
+ *
+ * Provides UI for displaying statistical analysis results for both
+ * analog and digital signals with range selection capabilities.
+ */
+
 #pragma once
 
 #include "GuiHelper.hpp"
@@ -5,9 +13,29 @@
 #include "Plot.hpp"
 #include "Statistics.hpp"
 
+/**
+ * @class StatisticsWindow
+ * @brief Window displaying statistical analysis results for plots
+ *
+ * Creates a floating window showing:
+ * - Series selection dropdown
+ * - Range selection controls (markers x0, x1)
+ * - Statistical metrics (min, max, mean, stddev for analog; pulse widths and frequency for digital)
+ *
+ * @note Works with marker-based range selection from plots
+ * @note Displays different metrics depending on signal type
+ */
 class StatisticsWindow
 {
    public:
+	/**
+	 * @brief Draws statistics window for analog signals
+	 *
+	 * Displays min, max, mean, and standard deviation within selected range.
+	 *
+	 * @param plt Shared pointer to plot to analyze
+	 * @note Creates "Statistics" window if series is selected
+	 */
 	void drawAnalog(std::shared_ptr<Plot> plt)
 	{
 		std::vector<std::string> serNames{"OFF"};
@@ -51,6 +79,14 @@ class StatisticsWindow
 			plt->stats.setState(false);
 	}
 
+	/**
+	 * @brief Draws statistics window for digital signals
+	 *
+	 * Displays pulse width analysis (Lmin, Lmax, Hmin, Hmax) and frequency (fmin, fmax).
+	 *
+	 * @param plt Shared pointer to plot to analyze
+	 * @note Creates "Statistics" window if series is selected
+	 */
 	void drawDigital(std::shared_ptr<Plot> plt)
 	{
 		std::vector<std::string> serNames{"OFF"};

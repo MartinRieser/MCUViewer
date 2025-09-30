@@ -1,9 +1,33 @@
+/**
+ * @file ScrollingBuffer.hpp
+ * @brief Thread-safe circular buffer for time-series plot data
+ *
+ * Implements a fixed-size circular buffer optimized for real-time plotting.
+ * When full, old data is overwritten. Provides thread-safe access for concurrent
+ * reading (GUI) and writing (acquisition threads).
+ */
+
 #ifndef __SCROLLINGBUFFER_HPP
 #define __SCROLLINGBUFFER_HPP
 
 #include <array>
 #include <cstring>
 #include <mutex>
+
+/**
+ * @class ScrollingBuffer
+ * @brief Circular buffer for continuous data streams
+ * @tparam T Data type (typically double for plot values)
+ *
+ * Optimized for real-time plotting applications where:
+ * - Data arrives continuously
+ * - Oldest data is automatically discarded when buffer fills
+ * - Multiple threads read/write concurrently
+ * - Fast access to sequential data ranges needed for rendering
+ *
+ * Maintains separate data and dataCopy arrays for double-buffering
+ * to allow safe GUI rendering while acquisition continues.
+ */
 template <typename T>
 class ScrollingBuffer
 {

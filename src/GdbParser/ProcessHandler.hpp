@@ -1,3 +1,13 @@
+/**
+ * @file ProcessHandler.hpp
+ * @brief Cross-platform subprocess management for GDB communication
+ *
+ * Provides platform-specific implementations for creating and communicating with
+ * subprocesses (specifically GDB). Uses Windows CreateProcess API on Windows and
+ * POSIX fork/exec on Unix/macOS. Enables bidirectional pipe communication for
+ * sending commands and receiving output from child processes.
+ */
+
 #ifndef _PROCESSHANDLER_HPP
 #define _PROCESSHANDLER_HPP
 
@@ -12,14 +22,23 @@
 #include <io.h>
 #include <windows.h>
 
+/**
+ * @class WindowsProcessHandler
+ * @brief Windows-specific subprocess handler using CreateProcess
+ *
+ * Manages subprocess lifecycle and I/O using Windows API. Creates bidirectional
+ * pipes for stdin/stdout redirection and spawns processes with hidden console windows.
+ */
 class WindowsProcessHandler
 {
    public:
+	/** @brief Destructor - closes all pipes */
 	~WindowsProcessHandler()
 	{
 		closePipes();
 	}
 
+	/** @brief Close stdin/stdout pipes to child process */
 	void closePipes()
 	{
 		if (pipes.first != nullptr)
@@ -41,6 +60,10 @@ class WindowsProcessHandler
 		}
 	}
 
+	/** @brief Execute command and read output until end marker found
+	 *  @param cmd Command string to send to subprocess stdin
+	 *  @param endMarker String marking end of expected output
+	 *  @return std::string Accumulated output from subprocess */
 	std::string executeCmd(std::string cmd, const std::string& endMarker)
 	{
 		std::string result{};

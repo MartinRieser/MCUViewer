@@ -1,3 +1,11 @@
+/**
+ * @file GuiPlotEdit.hpp
+ * @brief Plot properties editor window for MCUViewer
+ *
+ * Provides a modal window for editing plot properties including name, type,
+ * and X-axis variable selection for XY plots.
+ */
+
 #ifndef _GUI_PLOTEDIT_HPP
 #define _GUI_PLOTEDIT_HPP
 
@@ -8,14 +16,42 @@
 #include "Popup.hpp"
 #include "imgui.h"
 
+/**
+ * @class PlotEditWindow
+ * @brief Modal window for editing plot properties
+ *
+ * This window allows users to:
+ * - Rename plots (with uniqueness validation)
+ * - Change plot type (curve, bar, table, XY)
+ * - Select X-axis variable for XY plots
+ * - View and modify plot configuration
+ *
+ * @note Changes are applied immediately and synchronized with PlotGroupHandler
+ */
 class PlotEditWindow
 {
    public:
+	/**
+	 * @brief Constructs plot edit window
+	 *
+	 * @param plotHandler Handler for plot management
+	 * @param plotGroupHandler Handler for plot group management
+	 * @param variableHandler Handler for variable management
+	 */
 	PlotEditWindow(PlotHandler* plotHandler, PlotGroupHandler* plotGroupHandler, VariableHandler* variableHandler) : plotHandler(plotHandler), plotGroupHandler(plotGroupHandler), variableHandler(variableHandler)
 	{
 		selectVariableWindow = std::make_unique<SelectVariableWindow>(variableHandler, &selection, 1);
 	}
 
+	/**
+	 * @brief Draws the plot edit modal window
+	 *
+	 * Renders the modal popup with plot editing controls. Should be called
+	 * every frame to handle window display and user input.
+	 *
+	 * @note Window automatically closes on "Done" button or Escape key
+	 * @note Uses ImGui modal popup pattern
+	 */
 	void draw()
 	{
 		if (showPlotEditWindow)
@@ -42,11 +78,23 @@ class PlotEditWindow
 		}
 	}
 
+	/**
+	 * @brief Sets the plot to be edited
+	 *
+	 * @param plot Shared pointer to the plot whose properties should be edited
+	 * @note Call this before showing the window to specify which plot to edit
+	 */
 	void setPlotToEdit(std::shared_ptr<Plot> plot)
 	{
 		editedPlot = plot;
 	}
 
+	/**
+	 * @brief Sets the visibility state of the edit window
+	 *
+	 * @param state true to show window, false to hide
+	 * @note Tracks state changes to set keyboard focus when window opens
+	 */
 	void setShowPlotEditWindowState(bool state)
 	{
 		if (showPlotEditWindow != state)
@@ -54,6 +102,17 @@ class PlotEditWindow
 		showPlotEditWindow = state;
 	}
 
+	/**
+	 * @brief Draws the plot settings controls
+	 *
+	 * Renders input fields for:
+	 * - Plot name (with uniqueness validation)
+	 * - Plot type selection (curve/bar/table/XY)
+	 * - X-axis variable selection (for XY plots)
+	 *
+	 * @note Sets keyboard focus to name field when window first opens
+	 * @note Shows error popup if attempting to use duplicate name
+	 */
 	void drawPlotEditSettings()
 	{
 		if (editedPlot == nullptr)
@@ -118,23 +177,37 @@ class PlotEditWindow
 
    private:
 	/**
-	 * @brief Text alignemnt in front of the input fields
+	 * @brief Text alignment width for form labels
 	 *
+	 * Number of characters to align label text to for uniform field layout
 	 */
 	static constexpr size_t alignment = 18;
 
+	/** @brief Flag indicating if window should be displayed */
 	bool showPlotEditWindow = false;
+
+	/** @brief Flag indicating window visibility state changed (for focus management) */
 	bool stateChanged = false;
 
+	/** @brief Shared pointer to the plot currently being edited */
 	std::shared_ptr<Plot> editedPlot = nullptr;
 
+	/** @brief Handler for plot operations */
 	PlotHandler* plotHandler;
+
+	/** @brief Handler for plot group operations */
 	PlotGroupHandler* plotGroupHandler;
+
+	/** @brief Handler for variable operations */
 	VariableHandler* variableHandler;
 
+	/** @brief Popup for error messages (e.g., duplicate name) */
 	Popup popup;
 
+	/** @brief Set containing selected variable name(s) for X-axis */
 	std::set<std::string> selection;
+
+	/** @brief Variable selection window for choosing X-axis variable */
 	std::unique_ptr<SelectVariableWindow> selectVariableWindow;
 };
 

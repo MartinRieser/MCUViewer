@@ -1,3 +1,11 @@
+/**
+ * @file CSVStreamer.hpp
+ * @brief Asynchronous CSV file writer for data logging
+ *
+ * Provides double-buffered CSV logging to avoid blocking acquisition threads.
+ * One buffer accumulates new data while the other is written to disk asynchronously.
+ */
+
 #ifndef _CSV_STREAMER_HPP
 #define _CSV_STREAMER_HPP
 
@@ -9,6 +17,14 @@
 
 #include "spdlog/spdlog.h"
 
+/**
+ * @class CSVStreamer
+ * @brief Non-blocking CSV file writer with double buffering
+ *
+ * Efficiently logs time-series data to CSV files without impacting
+ * real-time acquisition performance. Uses two buffers that alternate
+ * between data collection and disk writing roles.
+ */
 class CSVStreamer
 {
    public:
