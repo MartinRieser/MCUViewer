@@ -8,31 +8,41 @@ This document tracks the detailed implementation tasks for the UART debug interf
 - 🔄 In progress
 - ✅ Completed and approved
 - 🔀 Split into subtasks
+- 🚫 Deferred (will implement later)
+
+**Development Strategy:**
+⚠️ **SIMULATOR-FIRST APPROACH**: We develop with the UART simulator first (no hardware needed). Target firmware implementation is deferred to Phase 5, only when real hardware is available for testing.
 
 ---
 
-## Phase 1: Foundation & Protocol (Weeks 1-2)
+## Phase 1: Foundation & Protocol - Simulator-First (Weeks 1-2)
 
-### Task 1.1: Project Structure Setup
-**Goal:** Create directory structure and build system integration
+### Task 1.1: Project Structure Setup (MCUViewer Only)
+**Goal:** Create directory structure and build system integration for MCUViewer
+
+**Note:** 🚫 Firmware directory deferred to Phase 5 (when hardware available)
 
 **Subtasks:**
 - ⬜ 1.1.1: Create `src/MemoryReader/Uart/` directory structure
 - ⬜ 1.1.2: Create `src/Recorder/` directory structure
-- ⬜ 1.1.3: Create `firmware/` directory structure
-- ⬜ 1.1.4: Update `CMakeLists.txt` with conditional UART compilation flag
-- ⬜ 1.1.5: Create `test/Uart/` directory for unit tests
+- 🚫 ~~1.1.3: Create `firmware/` directory structure~~ (deferred to Phase 5)
+- ⬜ 1.1.3: Update `CMakeLists.txt` with conditional UART compilation flag
+- ⬜ 1.1.4: Create `test/Uart/` directory for unit tests
 
 **Acceptance Criteria:**
-- All directories created
+- MCUViewer directories created
 - CMake builds successfully with `-DUART_SUPPORT=ON/OFF`
-- Directory structure matches plan
+- Directory structure ready for simulator and probe implementation
 
 **Testing:**
 ```bash
-mkdir -p src/MemoryReader/Uart src/Recorder firmware test/Uart
-cmake -DUART_SUPPORT=ON ..
-make -j8
+cd /Users/martinrieser/Documents/MCUViewer
+mkdir -p src/MemoryReader/Uart src/Recorder test/Uart
+# Verify directories exist
+ls -la src/MemoryReader/Uart
+ls -la src/Recorder
+ls -la test/Uart
+# CMake will be updated in next subtask
 ```
 
 ---
@@ -107,61 +117,77 @@ port.close();
 
 ---
 
-### Task 1.4: Basic UART Debug Probe (Read/Write Memory Only)
-**Goal:** Implement minimal UartDebugProbe with READ/WRITE_MEMORY
+### Task 1.4: UART Simulator (Basic Protocol Responder) - PRIORITY ⭐
+**Goal:** Create virtual UART device that simulates target firmware behavior
+
+**Note:** This is now PRIORITY - we need the simulator before the probe, so we can test without hardware!
 
 **Subtasks:**
-- ⬜ 1.4.1: Create `UartDebugProbe.hpp` class skeleton
-- ⬜ 1.4.2: Implement `getConnectedDevices()` using SerialPort
-- ⬜ 1.4.3: Implement `startAcquisition()` - open port and GET_INFO
-- ⬜ 1.4.4: Implement `stopAcquisition()` - close port
-- ⬜ 1.4.5: Implement `readMemory()` - send READ_MEMORY command
-- ⬜ 1.4.6: Implement `writeMemory()` - send WRITE_MEMORY command
-- ⬜ 1.4.7: Add timeout and error handling
-- ⬜ 1.4.8: Implement sequence number management
+- ⬜ 1.4.1: Create `UartSimulator.hpp` class
+- ⬜ 1.4.2: Implement virtual serial port connection (using socat on Linux/macOS)
+- ⬜ 1.4.3: Implement protocol parser (receives packets from MCUViewer)
+- ⬜ 1.4.4: Implement READ_MEMORY handler (from simulated memory map)
+- ⬜ 1.4.5: Implement WRITE_MEMORY handler
+- ⬜ 1.4.6: Implement GET_INFO handler (returns device name, capabilities)
+- ⬜ 1.4.7: Implement PING/PONG handler
+- ⬜ 1.4.8: Add CRC validation (reject packets with bad CRC)
+- ⬜ 1.4.9: Add simulated memory map (configurable addresses/values)
 
 **Acceptance Criteria:**
-- Can connect to UART port
+- Simulator responds to all basic commands correctly
+- CRC errors are detected and rejected
+- Memory map can be configured
+- Can run standalone (separate process/thread)
+
+**Testing:**
+```cpp
+// Start simulator on virtual port
+UartSimulator sim("/dev/pts/6"); // or COM99 on Windows
+sim.setMemoryValue(0x20000000, 0x12345678);
+sim.start();
+
+// Test with simple Python script first:
+import serial
+ser = serial.Serial('/dev/pts/5', 115200)
+# Send READ_MEMORY command
+# Verify response matches expected format
+```
+
+---
+
+### Task 1.5: Basic UART Debug Probe (Read/Write Memory Only)
+**Goal:** Implement minimal UartDebugProbe with READ/WRITE_MEMORY
+
+**Note:** Now implemented AFTER simulator (Task 1.4) so we can test immediately
+
+**Subtasks:**
+- ⬜ 1.5.1: Create `UartDebugProbe.hpp` class skeleton
+- ⬜ 1.5.2: Implement `getConnectedDevices()` using SerialPort
+- ⬜ 1.5.3: Implement `startAcquisition()` - open port and GET_INFO
+- ⬜ 1.5.4: Implement `stopAcquisition()` - close port
+- ⬜ 1.5.5: Implement `readMemory()` - send READ_MEMORY command
+- ⬜ 1.5.6: Implement `writeMemory()` - send WRITE_MEMORY command
+- ⬜ 1.5.7: Add timeout and error handling
+- ⬜ 1.5.8: Implement sequence number management
+
+**Acceptance Criteria:**
+- Can connect to UART port (simulator)
 - Can read memory via protocol
 - Can write memory via protocol
 - Proper error handling and timeouts
 
 **Testing:**
-Requires simulator (Task 1.5) or real target
-
----
-
-### Task 1.5: UART Simulator (Basic Mode)
-**Goal:** Create virtual UART device for testing without hardware
-
-**Subtasks:**
-- ⬜ 1.5.1: Create `UartSimulator.hpp` class
-- ⬜ 1.5.2: Implement virtual serial port connection
-- ⬜ 1.5.3: Implement protocol parser
-- ⬜ 1.5.4: Implement READ_MEMORY handler (from simulated memory map)
-- ⬜ 1.5.5: Implement WRITE_MEMORY handler
-- ⬜ 1.5.6: Implement GET_INFO handler
-- ⬜ 1.5.7: Implement PING/PONG handler
-- ⬜ 1.5.8: Add CRC validation
-
-**Acceptance Criteria:**
-- Simulator responds to all basic commands
-- CRC errors are detected and rejected
-- Memory map can be configured
-
-**Testing:**
 ```cpp
-// Create virtual COM port pair (platform-specific)
-// Linux: socat -d -d pty,raw,echo=0 pty,raw,echo=0
-// Returns: /dev/pts/5 <-> /dev/pts/6
-
-UartSimulator sim("/dev/pts/6"); // or COM99 on Windows
+// Start simulator first (Task 1.4)
+UartSimulator sim("/dev/pts/6");
 sim.setMemoryValue(0x20000000, 0x12345678);
 sim.start();
 
-// In another thread/process:
+// Now test probe
 UartDebugProbe probe(logger);
-probe.getConnectedDevices(); // Should list /dev/pts/5
+auto devices = probe.getConnectedDevices();
+assert(!devices.empty());
+
 DebugProbeSettings settings;
 settings.uartPort = "/dev/pts/5";
 settings.uartBaudrate = 115200;
@@ -664,10 +690,18 @@ Full end-to-end workflow:
 
 ---
 
-## Phase 5: UART Hardware Recording (Weeks 7-8)
+## Phase 5: UART Hardware Recording (Weeks 7-8) - 🚫 DEFERRED
 
-### Task 5.1: Target Firmware Protocol Handler
+**⚠️ Note:** This entire phase is DEFERRED until real hardware is available for testing. The simulator (completed in Phase 1) provides all the functionality needed for development and testing of MCUViewer features.
+
+**When to implement:** Only when you have access to target hardware (STM32 or similar MCU with UART).
+
+---
+
+### Task 5.1: Target Firmware Protocol Handler - 🚫 DEFERRED
 **Goal:** Implement basic UART firmware library
+
+**Status:** 🚫 Deferred - waiting for hardware availability
 
 **Subtasks:**
 - ⬜ 5.1.1: Create `firmware/inc/mcuv_uart.h` API header
@@ -692,8 +726,10 @@ arm-none-eabi-size mcuv_uart_protocol.o
 
 ---
 
-### Task 5.2: Target Firmware Memory Handlers
+### Task 5.2: Target Firmware Memory Handlers - 🚫 DEFERRED
 **Goal:** Implement READ/WRITE_MEMORY handlers
+
+**Status:** 🚫 Deferred - waiting for hardware availability
 
 **Subtasks:**
 - ⬜ 5.2.1: Create `firmware/src/mcuv_uart_memory.c`
@@ -732,8 +768,10 @@ assert response[1] == 0x02  # READ_MEMORY_RESP
 
 ---
 
-### Task 5.3: Target Firmware Circular Buffer
+### Task 5.3: Target Firmware Circular Buffer - 🚫 DEFERRED
 **Goal:** Implement on-target circular buffer with DMA
+
+**Status:** 🚫 Deferred - waiting for hardware availability
 
 **Subtasks:**
 - ⬜ 5.3.1: Create `firmware/src/mcuv_recorder.c`
@@ -776,8 +814,10 @@ assert(recorder_stats.total_samples == 1000);
 
 ---
 
-### Task 5.4: Target Firmware Trigger System
+### Task 5.4: Target Firmware Trigger System - 🚫 DEFERRED
 **Goal:** Implement on-target trigger evaluation
+
+**Status:** 🚫 Deferred - waiting for hardware availability
 
 **Subtasks:**
 - ⬜ 5.4.1: Create `firmware/src/mcuv_trigger.c`
@@ -820,8 +860,10 @@ assert(trigger_fired_at_value >= 500 && trigger_fired_at_value <= 510);
 
 ---
 
-### Task 5.5: UART Backend Hardware Mode
+### Task 5.5: UART Backend Hardware Mode - 🚫 DEFERRED
 **Goal:** Enable hardware recording in UartRecorderBackend
+
+**Status:** 🚫 Deferred - waiting for hardware availability
 
 **Subtasks:**
 - ⬜ 5.5.1: Implement `setupHardwareRecording()` in UartRecorderBackend
@@ -874,8 +916,10 @@ std::cout << "Downloaded 10000 samples in " << duration.count() << "ms" << std::
 
 ---
 
-### Task 5.6: STM32 Example Project
+### Task 5.6: STM32 Example Project - 🚫 DEFERRED
 **Goal:** Create complete STM32 example with hardware recorder
+
+**Status:** 🚫 Deferred - waiting for hardware availability
 
 **Subtasks:**
 - ⬜ 5.6.1: Create `firmware/examples/stm32f4_example/` project
