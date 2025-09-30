@@ -42,3 +42,4 @@ test/MCUViewer_test/.settings/
 
 # Test binaries
 test/Uart/UartProtocolTest
+test/Uart/SerialPortTest
