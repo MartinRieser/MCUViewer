@@ -1,3 +1,13 @@
+/**
+ * @file TraceReader.hpp
+ * @brief High-level SWO trace data decoder and manager.
+ *
+ * TraceReader coordinates trace probe hardware, decodes raw ITM packets into
+ * channel data with timestamps, and provides thread-safe buffered access to
+ * trace streams. It handles the complete ITM protocol state machine including
+ * synchronization, timestamps, and multi-byte payloads.
+ */
+
 #ifndef _ITRACEREADER_HPP
 #define _ITRACEREADER_HPP
 
@@ -11,6 +21,42 @@
 #include "RingBufferBlocking.hpp"
 #include "spdlog/spdlog.h"
 
+/**
+ * @class TraceReader
+ * @brief SWO trace packet decoder and data manager.
+ *
+ * Manages the complete trace capture pipeline:
+ * - Coordinates trace probe hardware (STLink/JLink)
+ * - Runs background thread to continuously read trace data
+ * - Decodes ITM packet protocol (source packets, timestamps, sync)
+ * - Buffers decoded data in thread-safe ring buffer
+ * - Provides error detection and diagnostics
+ *
+ * ITM Protocol Overview:
+ * - Source packets: 1-4 byte payloads on channels 0-31
+ * - Local timestamps: Relative time markers
+ * - Global timestamps: Absolute time synchronization
+ * - Protocol error detection
+ *
+ * Usage example:
+ * @code
+ * TraceReader reader(logger);
+ * ITraceProbe::TraceProbeSettings settings;
+ * std::array<bool, 32> channels = {};
+ * channels[0] = true; // Enable channel 0
+ *
+ * reader.setCoreClockFrequency(168000000);
+ * reader.setTraceFrequency(16800000);
+ *
+ * if (reader.startAcqusition(settings, channels)) {
+ *     double timestamp;
+ *     std::array<uint32_t, 10> data;
+ *     while (reader.readTrace(timestamp, data)) {
+ *         // Process trace data
+ *     }
+ * }
+ * @endcode
+ */
 class TraceReader
 {
    public:
