@@ -29,14 +29,21 @@ include_directories(${EXECUTABLE}
     ${CMAKE_SOURCE_DIR}/src/Statistics
     ${CMAKE_SOURCE_DIR}/src/GdbParser
     ${CMAKE_SOURCE_DIR}/src/Variable
-    ${CMAKE_SOURCE_DIR}/src/VariableHandler)
+    ${CMAKE_SOURCE_DIR}/src/VariableHandler
+    ${CMAKE_SOURCE_DIR}/src/MemoryReader
+    ${CMAKE_SOURCE_DIR}/src/MemoryReader/Uart
+    ${CMAKE_SOURCE_DIR}/test/Uart)
 
 include_directories(${EXECUTABLE} SYSTEM PRIVATE
     ${CMAKE_SOURCE_DIR}/third_party/spdlog/inc)
 
 set(SOURCES
     ${CMAKE_SOURCE_DIR}/src/TraceReader/TraceReader.cpp
-    ${CMAKE_SOURCE_DIR}/src/Variable/Variable.cpp)
+    ${CMAKE_SOURCE_DIR}/src/Variable/Variable.cpp
+    ${CMAKE_SOURCE_DIR}/src/MemoryReader/Uart/UartProtocol.cpp
+    ${CMAKE_SOURCE_DIR}/src/MemoryReader/Uart/SerialPort.cpp
+    ${CMAKE_SOURCE_DIR}/src/MemoryReader/Uart/UartDebugProbe.cpp
+    ${CMAKE_SOURCE_DIR}/test/Uart/UartSimulator.cpp)
 
 target_link_libraries(GTest::GTest INTERFACE gtest_main gmock gmock_main)
 
@@ -47,6 +54,8 @@ add_executable(${EXECUTABLE} main.cpp
     StatisticsTest.cpp
     GdbParserTest.cpp
     VariableTest.cpp
+    Uart/UartDebugProbeTest.cpp
+    Uart/UartIntegrationTest.cpp
     ${SOURCES})
 
 add_compile_options(-Wall -Wextra -Wpedantic)
@@ -72,3 +81,15 @@ add_custom_target(copy_file ALL
 )
 
 add_dependencies(${EXECUTABLE} copy_file)
+
+# Build standalone UART simulator for GUI testing
+add_executable(UartSimulatorStandalone
+    Uart/UartSimulatorStandalone.cpp
+    Uart/UartSimulator.cpp
+    ${CMAKE_SOURCE_DIR}/src/MemoryReader/Uart/UartProtocol.cpp
+    ${CMAKE_SOURCE_DIR}/src/MemoryReader/Uart/SerialPort.cpp)
+
+target_include_directories(UartSimulatorStandalone PRIVATE
+    ${CMAKE_SOURCE_DIR}/src/MemoryReader/Uart
+    ${CMAKE_SOURCE_DIR}/test/Uart
+    ${CMAKE_SOURCE_DIR}/third_party/spdlog/inc)

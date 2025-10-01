@@ -145,7 +145,8 @@ if(UART_SUPPORT)
     message("UART debug probe support: ENABLED")
     list(APPEND PROJECT_SOURCES
         ${CMAKE_CURRENT_SOURCE_DIR}/src/MemoryReader/Uart/UartProtocol.cpp
-        ${CMAKE_CURRENT_SOURCE_DIR}/src/MemoryReader/Uart/SerialPort.cpp)
+        ${CMAKE_CURRENT_SOURCE_DIR}/src/MemoryReader/Uart/SerialPort.cpp
+        ${CMAKE_CURRENT_SOURCE_DIR}/src/MemoryReader/Uart/UartDebugProbe.cpp)
 else()
     message("UART debug probe support: DISABLED")
 endif()
