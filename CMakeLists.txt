@@ -91,8 +91,12 @@ if(UNIX)
         find_package(OpenGL REQUIRED)
         find_package(GLUT REQUIRED)
 
-        # TODO distinguish between ARM and x86 */
-        set(STLINK_MACOS ${CMAKE_CURRENT_SOURCE_DIR}/third_party/stlink/lib/macos/libstlink.a)
+        # Use Homebrew stlink for macOS (supports both ARM64 and x86_64)
+        find_library(STLINK_MACOS NAMES stlink PATHS /opt/homebrew/lib /usr/local/lib REQUIRED)
+        if(NOT STLINK_MACOS)
+            message(FATAL_ERROR "stlink library not found. Install with: brew install stlink")
+        endif()
+        message(STATUS "Found stlink library: ${STLINK_MACOS}")
     else()
         set(STLINK_LINUX ${CMAKE_CURRENT_SOURCE_DIR}/third_party/stlink/lib/linux/libstlink.a)
     endif()
@@ -221,7 +225,6 @@ target_include_directories(${EXECUTABLE} PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/src/DataHandler)
 
 target_include_directories(${EXECUTABLE} SYSTEM PRIVATE
-    ${CMAKE_CURRENT_SOURCE_DIR}/third_party/stlink/inc/
     ${JLINK_INCLUDE_DIR}
     ${LIBUSB_INCLUDE_DIR}
     ${CMAKE_CURRENT_SOURCE_DIR}/third_party/imgui/backends/
@@ -235,7 +238,20 @@ target_include_directories(${EXECUTABLE} SYSTEM PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/third_party/CLI11/inc/)
 
 if(APPLE)
-    include_directories(${OPENGL_INCLUDE_DIRS} ${GLUT_INCLUDE_DIRS} ${STLINK_INCLUDE_DIRS})
+    # Use Homebrew stlink headers on macOS
+    # Need to include both the base and stlink subdirectory due to Homebrew packaging
+    target_include_directories(${EXECUTABLE} SYSTEM PRIVATE
+        /opt/homebrew/include
+        /opt/homebrew/include/stlink
+        /usr/local/include
+        /usr/local/include/stlink)
+    include_directories(${OPENGL_INCLUDE_DIRS} ${GLUT_INCLUDE_DIRS})
+elseif(UNIX)
+    # Use bundled stlink headers on Linux
+    target_include_directories(${EXECUTABLE} SYSTEM PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/third_party/stlink/inc/)
+endif()
+
+if(APPLE)
     target_link_libraries(${EXECUTABLE} ${STLINK_MACOS} ${LIBUSB_LIBRARY} ${OPENGL_LIBRARIES} ${GLUT_LIBRARY} spdlog::spdlog pthread dl glfw nfd)
 elseif(UNIX)
     target_link_libraries(${EXECUTABLE} ${STLINK_LINUX} ${LIBUSB_LIBRARY} ${JLINK_LINUX} spdlog::spdlog pthread dl GL glfw nfd)

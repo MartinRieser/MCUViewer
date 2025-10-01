@@ -6,7 +6,12 @@
 #include <vector>
 
 #include "IDebugProbe.hpp"
+
+#ifdef __APPLE__
+#include <stlink/stlink.h>
+#else
 #include "stlink.h"
+#endif
 
 #include "spdlog/spdlog.h"
 

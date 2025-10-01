@@ -5,7 +5,12 @@
 
 #include "ITraceProbe.hpp"
 #include "spdlog/spdlog.h"
+
+#ifdef __APPLE__
+#include <stlink/stlink.h>
+#else
 #include "stlink.h"
+#endif
 
 class StlinkTraceProbe : public ITraceProbe
 {
