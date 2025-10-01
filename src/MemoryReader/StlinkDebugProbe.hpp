@@ -6,11 +6,13 @@
 #include <vector>
 
 #include "IDebugProbe.hpp"
+#include "stlink.h"
 
 #ifdef __APPLE__
-#include <stlink/stlink.h>
-#else
-#include "stlink.h"
+extern "C" {
+#include "read_write.h"
+#include "usb.h"
+}
 #endif
 
 #include "spdlog/spdlog.h"
