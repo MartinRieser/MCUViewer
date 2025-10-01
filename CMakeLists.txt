@@ -321,6 +321,13 @@ if(WIN32)
         ${CMAKE_BINARY_DIR})
 endif()
 
+# Fix JLink dylib path on macOS (SEGGER's dylib has relative install_name)
+if(APPLE AND JLINK_MACOS_FOUND)
+    add_custom_command(TARGET ${EXECUTABLE} POST_BUILD
+        COMMAND install_name_tool -change "Output/Release/arm64/libjlinkarm.8.72.1.dylib" "${JLINK_MACOS}" ${CMAKE_BINARY_DIR}/${EXECUTABLE}
+        COMMENT "Fixing JLink library path in ${EXECUTABLE}")
+endif()
+
 add_custom_command(TARGET ${EXECUTABLE} POST_BUILD
     COMMAND ${CMAKE_COMMAND} -E copy
     ${CMAKE_CURRENT_SOURCE_DIR}/imgui.ini
