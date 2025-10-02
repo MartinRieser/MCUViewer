@@ -129,6 +129,9 @@ void Gui::mainThread(std::string externalPath)
 #ifdef JLINK_AVAILABLE
 	jlinkProbe = std::make_shared<JlinkDebugProbe>(logger);
 #endif
+#ifdef UART_SUPPORT
+	uartProbe = std::make_shared<UartDebugProbe>(logger);
+#endif
 	stlinkProbe = std::make_shared<StlinkDebugProbe>(logger);
 	debugProbeDevice = stlinkProbe;
 	viewerDataHandler->setDebugProbe(debugProbeDevice);

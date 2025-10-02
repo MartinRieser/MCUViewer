@@ -70,7 +70,11 @@ void Gui::drawDebugProbes()
 	GuiHelper::drawTextAlignedToSize("Debug probe:", alignment);
 	ImGui::SameLine();
 
+#ifdef UART_SUPPORT
+	const char* debugProbes[] = {"STLINK", "JLINK", "UART"};
+#else
 	const char* debugProbes[] = {"STLINK", "JLINK"};
+#endif
 	IDebugProbe::DebugProbeSettings probeSettings = viewerDataHandler->getProbeSettings();
 	int32_t debugProbe = probeSettings.debugProbe;
 
@@ -85,6 +89,15 @@ void Gui::drawDebugProbes()
 			debugProbeDevice = jlinkProbe;
 #else
 			debugProbeDevice = stlinkProbe; // Fallback to STLink when JLink unavailable
+#endif
+			shouldListDevices = true;
+		}
+		else if (probeSettings.debugProbe == 2)
+		{
+#ifdef UART_SUPPORT
+			debugProbeDevice = uartProbe;
+#else
+			debugProbeDevice = stlinkProbe; // Fallback to STLink when UART unavailable
 #endif
 			shouldListDevices = true;
 		}

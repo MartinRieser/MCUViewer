@@ -22,6 +22,9 @@
 #include "JlinkDebugProbe.hpp"
 #include "JlinkTraceProbe.hpp"
 #endif
+#ifdef UART_SUPPORT
+#include "UartDebugProbe.hpp"
+#endif
 #include "Plot.hpp"
 #include "PlotGroupHandler.hpp"
 #include "Popup.hpp"
@@ -67,6 +70,9 @@ class Gui
 	std::shared_ptr<IDebugProbe> stlinkProbe;
 #ifdef JLINK_AVAILABLE
 	std::shared_ptr<IDebugProbe> jlinkProbe;
+#endif
+#ifdef UART_SUPPORT
+	std::shared_ptr<IDebugProbe> uartProbe;
 #endif
 	std::shared_ptr<IDebugProbe> debugProbeDevice;
 	std::vector<std::string> devicesList{};
