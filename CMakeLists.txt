@@ -204,6 +204,10 @@ else()
     message("UART debug probe support: DISABLED")
 endif()
 
+# Recorder module sources
+list(APPEND PROJECT_SOURCES
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/Recorder/RecorderModule.cpp)
+
 set(IMGUI_SOURCES
     ${CMAKE_CURRENT_SOURCE_DIR}/third_party/imgui/imgui.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/third_party/imgui/imgui_demo.cpp
@@ -256,6 +260,7 @@ target_include_directories(${EXECUTABLE} PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/src/Gui
     ${CMAKE_CURRENT_SOURCE_DIR}/src/MemoryReader
     ${CMAKE_CURRENT_SOURCE_DIR}/src/MemoryReader/Uart
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/Recorder
     ${CMAKE_CURRENT_SOURCE_DIR}/src/Plot
     ${CMAKE_CURRENT_SOURCE_DIR}/src/ScrollingBuffer
     ${CMAKE_CURRENT_SOURCE_DIR}/src/MovingAverage
