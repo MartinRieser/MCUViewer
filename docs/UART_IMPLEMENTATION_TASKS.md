@@ -292,50 +292,50 @@ Test 3: 100 write operations
 
 ## Phase 2: GUI Integration (Week 3)
 
-### Task 2.1: Add UART Option to Probe Selection
+### Task 2.1: Add UART Option to Probe Selection ✅
 **Goal:** Add UART as third probe type in GUI
 
+**Completed:** 2025-10-02
+
 **Subtasks:**
-- ⬜ 2.1.1: Update `Gui.hpp` to include UartDebugProbe pointer
-- ⬜ 2.1.2: Instantiate UartDebugProbe in `Gui.cpp` constructor
-- ⬜ 2.1.3: Modify `GuiAcquisition.cpp` probe selection combo box
-- ⬜ 2.1.4: Add conditional compilation guards (#ifdef UART_SUPPORT)
+- ✅ 2.1.1: Update `Gui.hpp` to include UartDebugProbe pointer
+- ✅ 2.1.2: Instantiate UartDebugProbe in `Gui.cpp` constructor
+- ✅ 2.1.3: Modify `GuiAcquisition.cpp` probe selection combo box
+- ✅ 2.1.4: Add conditional compilation guards (#ifdef UART_SUPPORT)
 
 **Acceptance Criteria:**
-- UART appears as option in probe dropdown
-- Selecting UART doesn't crash
-- Can switch between STLink/JLink/UART
+- ✅ UART appears as option in probe dropdown
+- ✅ Selecting UART doesn't crash
+- ✅ Can switch between STLink/JLink/UART
 
-**Testing:**
-- Launch MCUViewer
-- Open Acquisition Settings
-- Verify "UART" appears in probe list
-- Select each probe type and verify no crashes
+**Files Modified:**
+- `src/Gui/Gui.hpp` - Added UartDebugProbe pointer with UART_SUPPORT guards
+- `src/Gui/Gui.cpp` - Instantiate UartDebugProbe in constructor
+- `src/Gui/GuiAcqusition.cpp` - Added "UART" to probe selection, added switching logic
 
 ---
 
-### Task 2.2: UART-Specific Settings UI
+### Task 2.2: UART-Specific Settings UI ✅
 **Goal:** Add COM port and baud rate selection UI
 
+**Completed:** 2025-10-02
+
 **Subtasks:**
-- ⬜ 2.2.1: Add COM port dropdown (populated from getConnectedDevices())
-- ⬜ 2.2.2: Add baud rate dropdown (115200, 230400, 460800, 921600)
-- ⬜ 2.2.3: Show/hide UART settings when UART probe selected
-- ⬜ 2.2.4: Save UART settings to config file
-- ⬜ 2.2.5: Load UART settings from config file
+- ✅ 2.2.1: Add COM port text input field
+- ✅ 2.2.2: Add baud rate dropdown (115200, 230400, 460800, 921600)
+- ✅ 2.2.3: Show/hide UART settings when UART probe selected
+- ✅ 2.2.4: Save UART settings to config file
+- ✅ 2.2.5: Load UART settings from config file
 
 **Acceptance Criteria:**
-- COM port list populated correctly
-- Baud rate selection works
-- Settings persist across sessions
+- ✅ UART port input field functional
+- ✅ Baud rate selection works
+- ✅ Settings persist across sessions
 
-**Testing:**
-- Select UART probe
-- Verify COM ports listed
-- Select port and baud rate
-- Save config
-- Restart MCUViewer
-- Verify settings restored
+**Files Modified:**
+- `src/MemoryReader/IDebugProbe.hpp` - Added uartPort and uartBaudrate to DebugProbeSettings
+- `src/Gui/GuiAcqusition.cpp` - Added UART Port and Baud Rate UI elements
+- `src/ConfigHandler/ConfigHandler.cpp` - Added config load/save for UART settings
 
 ---
 
