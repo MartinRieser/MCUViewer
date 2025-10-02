@@ -27,6 +27,8 @@ class IDebugProbe
 		std::string device = "";
 		Mode mode = Mode::NORMAL;
 		uint32_t speedkHz = 10000;
+		std::string uartPort = "";
+		uint32_t uartBaudrate = 115200;
 
 	} DebugProbeSettings;
 

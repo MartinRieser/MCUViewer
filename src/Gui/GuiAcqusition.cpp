@@ -166,6 +166,39 @@ void Gui::drawDebugProbes()
 		ImGui::SameLine();
 		ImGui::HelpMarker("Select normal or high speed sampling (HSS) mode");
 	}
+#ifdef UART_SUPPORT
+	else if (probeSettings.debugProbe == 2)
+	{
+		GuiHelper::drawTextAlignedToSize("UART Port:", alignment);
+		ImGui::SameLine();
+
+		if (ImGui::InputText("##uartPort", &probeSettings.uartPort, 0, NULL, NULL))
+			modified = true;
+
+		GuiHelper::drawTextAlignedToSize("Baud Rate:", alignment);
+		ImGui::SameLine();
+
+		const char* baudRates[] = {"115200", "230400", "460800", "921600"};
+		const uint32_t baudRateValues[] = {115200, 230400, 460800, 921600};
+		int32_t selectedBaud = 0;
+		for (int i = 0; i < 4; i++)
+		{
+			if (probeSettings.uartBaudrate == baudRateValues[i])
+			{
+				selectedBaud = i;
+				break;
+			}
+		}
+
+		if (ImGui::Combo("##baudRate", &selectedBaud, baudRates, IM_ARRAYSIZE(baudRates)))
+		{
+			probeSettings.uartBaudrate = baudRateValues[selectedBaud];
+			modified = true;
+		}
+
+		probeSettings.mode = IDebugProbe::Mode::NORMAL;
+	}
+#endif
 	else
 		probeSettings.mode = IDebugProbe::Mode::NORMAL;
 

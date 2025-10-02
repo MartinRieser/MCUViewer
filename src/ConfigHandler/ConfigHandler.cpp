@@ -279,6 +279,8 @@ bool ConfigHandler::readConfigFile(std::string& elfPath)
 	getValue("settings", "probe_mode", debugProbeSettings.mode);
 	getValue("settings", "probe_speed_kHz", debugProbeSettings.speedkHz);
 	debugProbeSettings.serialNumber = ini->get("settings").get("probe_SN");
+	debugProbeSettings.uartPort = ini->get("settings").get("uart_port");
+	getValue("settings", "uart_baudrate", debugProbeSettings.uartBaudrate);
 	getValue("settings", "should_log", viewerSettings.shouldLog);
 	viewerSettings.logFilePath = ini->get("settings").get("log_directory");
 	viewerSettings.gdbCommand = ini->get("settings").get("gdb_command");
@@ -392,6 +394,8 @@ mINI::INIStructure ConfigHandler::prepareSaveConfigFile(const std::string& elfPa
 	(configIni)["settings"]["probe_mode"] = std::to_string(debugProbeSettings.mode);
 	(configIni)["settings"]["probe_speed_kHz"] = std::to_string(debugProbeSettings.speedkHz);
 	(configIni)["settings"]["probe_SN"] = debugProbeSettings.serialNumber;
+	(configIni)["settings"]["uart_port"] = debugProbeSettings.uartPort;
+	(configIni)["settings"]["uart_baudrate"] = std::to_string(debugProbeSettings.uartBaudrate);
 	(configIni)["settings"]["should_log"] = viewerSettings.shouldLog ? std::string("true") : std::string("false");
 	(configIni)["settings"]["log_directory"] = viewerSettings.logFilePath;
 	(configIni)["settings"]["gdb_command"] = viewerSettings.gdbCommand;
