@@ -53,7 +53,7 @@ static void glfw_error_callback(int error, const char* description)
 	fprintf(stderr, "GLFW Error %d: %s\n", error, description);
 }
 
-static float getContentScale(GLFWwindow* window)
+[[maybe_unused]] static float getContentScale(GLFWwindow* window)
 {
 	float xscale;
 	float yscale;

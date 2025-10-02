@@ -130,5 +130,5 @@ class SelectVariableWindow
 	std::set<std::string>* selection;
 	std::string popupName;
 	bool show = false;
-	int id;
+	[[maybe_unused]] int id;
 };

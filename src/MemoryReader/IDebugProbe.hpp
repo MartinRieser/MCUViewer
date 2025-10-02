@@ -20,7 +20,7 @@ class IDebugProbe
 		HSS = 1,
 	};
 
-	typedef struct
+	struct DebugProbeSettings
 	{
 		uint32_t debugProbe = 0;
 		std::string serialNumber = "";
@@ -30,7 +30,7 @@ class IDebugProbe
 		std::string uartPort = "";
 		uint32_t uartBaudrate = 115200;
 
-	} DebugProbeSettings;
+	};
 
 	/* timestamp (first) and a map of <address-value> entries (second) only fo HSS mode */
 	using varEntryType = std::pair<double, std::unordered_map<uint32_t, double>>;

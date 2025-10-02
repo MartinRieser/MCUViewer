@@ -144,7 +144,7 @@ TraceReader::TraceState TraceReader::updateTraceIdle(uint8_t c)
 	{
 		sourceFrameSize = (c & 0x03);
 		currentChannel[awaitingTimestamp] = (c & 0xf8) >> 3;
-		return TRACE_STATE_TARGET_SOURCE_1B;
+		return TraceState::TARGET_SOURCE_1B;
 	}
 	else if (TRACE_OP_IS_LOCAL_TIME(c))
 	{
@@ -159,23 +159,23 @@ TraceReader::TraceState TraceReader::updateTraceIdle(uint8_t c)
 			traceIndicators.delayedTimestamp3++;
 
 		if (TRACE_OP_GET_CONTINUATION(c))
-			return TRACE_STATE_TARGET_TIMESTAMP_HEADER;
+			return TraceState::TARGET_TIMESTAMP_HEADER;
 		else
 		{
 			timestampVec.push_back(c);
 			timestampEnd(true);
-			return TRACE_STATE_IDLE;
+			return TraceState::IDLE;
 		}
 	}
 	else if (TRACE_OP_IS_EXTENSION(c))
-		return TRACE_OP_GET_CONTINUATION(c) ? TRACE_STATE_SKIP_FRAME : TRACE_STATE_IDLE;
+		return TRACE_OP_GET_CONTINUATION(c) ? TraceState::SKIP_FRAME : TraceState::IDLE;
 	else if (TRACE_OP_IS_OVERFLOW(c))
 		logger->error("OVERFLOW OPTCODE {}", c);
 
 	logger->debug("Unknown optcode {}", c);
 	traceIndicators.errorFramesTotal++;
 
-	return TRACE_STATE_IDLE;
+	return TraceState::IDLE;
 }
 
 void TraceReader::timestampEnd(bool headerData)
@@ -214,67 +214,67 @@ TraceReader::TraceState TraceReader::updateTrace(uint8_t c)
 
 	switch (state)
 	{
-		case TRACE_STATE_IDLE:
+		case TraceState::IDLE:
 			return updateTraceIdle(c);
 
-		case TRACE_STATE_TARGET_SOURCE_1B:
+		case TraceState::TARGET_SOURCE_1B:
 		{
 			currentValue[awaitingTimestamp] = c;
 			if (sourceFrameSize == 0x01)
 			{
 				awaitingTimestamp++;
-				return TRACE_STATE_IDLE;
+				return TraceState::IDLE;
 			}
-			return TRACE_STATE_TARGET_SOURCE_2B;
+			return TraceState::TARGET_SOURCE_2B;
 		}
-		case TRACE_STATE_TARGET_SOURCE_2B:
+		case TraceState::TARGET_SOURCE_2B:
 		{
 			currentValue[awaitingTimestamp] |= (c << 8);
 			if (sourceFrameSize == 0x02)
 			{
 				awaitingTimestamp++;
-				return TRACE_STATE_IDLE;
+				return TraceState::IDLE;
 			}
-			return TRACE_STATE_TARGET_SOURCE_3B;
+			return TraceState::TARGET_SOURCE_3B;
 		}
-		case TRACE_STATE_TARGET_SOURCE_3B:
+		case TraceState::TARGET_SOURCE_3B:
 		{
 			currentValue[awaitingTimestamp] |= (c << 16);
-			return TRACE_STATE_TARGET_SOURCE_4B;
+			return TraceState::TARGET_SOURCE_4B;
 		}
-		case TRACE_STATE_TARGET_SOURCE_4B:
+		case TraceState::TARGET_SOURCE_4B:
 		{
 			currentValue[awaitingTimestamp++] |= (c << 24);
-			return TRACE_STATE_IDLE;
+			return TraceState::IDLE;
 		}
 
-		case TRACE_STATE_TARGET_TIMESTAMP_HEADER:
+		case TraceState::TARGET_TIMESTAMP_HEADER:
 		{
 			timestampVec.push_back(c);
 			if (TRACE_OP_GET_CONTINUATION(c))
-				return TRACE_STATE_TARGET_TIMESTAMP_CONT;
+				return TraceState::TARGET_TIMESTAMP_CONT;
 			else
 				timestampEnd(false);
-			return TRACE_STATE_IDLE;
+			return TraceState::IDLE;
 		}
 
-		case TRACE_STATE_TARGET_TIMESTAMP_CONT:
+		case TraceState::TARGET_TIMESTAMP_CONT:
 		{
 			timestampVec.push_back(c);
 			if (TRACE_OP_GET_CONTINUATION(c))
-				return TRACE_STATE_TARGET_TIMESTAMP_CONT;
+				return TraceState::TARGET_TIMESTAMP_CONT;
 			else
 				timestampEnd(false);
-			return TRACE_STATE_IDLE;
+			return TraceState::IDLE;
 		}
 
-		case TRACE_STATE_SKIP_FRAME:
-			return TRACE_OP_GET_CONTINUATION(c) ? TRACE_STATE_SKIP_FRAME
-												: TRACE_STATE_IDLE;
+		case TraceState::SKIP_FRAME:
+			return TRACE_OP_GET_CONTINUATION(c) ? TraceState::SKIP_FRAME
+												: TraceState::IDLE;
 
 		default:
-			logger->critical("Invalid state! {}", state);
-			return TRACE_STATE_IDLE;
+			logger->critical("Invalid state! {}", static_cast<int>(state));
+			return TraceState::IDLE;
 	}
 }
 

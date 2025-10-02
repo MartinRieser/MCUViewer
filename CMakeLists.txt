@@ -90,6 +90,7 @@ if(UNIX)
     if(APPLE)
         find_package(OpenGL REQUIRED)
         find_package(GLUT REQUIRED)
+        add_compile_definitions(GL_SILENCE_DEPRECATION)
 
         # Use Homebrew stlink for both ARM64 and x86_64
         if(CMAKE_SYSTEM_PROCESSOR STREQUAL "arm64")

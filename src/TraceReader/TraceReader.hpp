@@ -50,21 +50,21 @@ class TraceReader
 	TraceIndicators getTraceIndicators() const;
 
    private:
-	typedef enum
+	enum class TraceState
 	{
-		TRACE_STATE_UNKNOWN,
-		TRACE_STATE_IDLE,
-		TRACE_STATE_TARGET_SOURCE_1B,
-		TRACE_STATE_TARGET_SOURCE_2B,
-		TRACE_STATE_TARGET_SOURCE_3B,
-		TRACE_STATE_TARGET_SOURCE_4B,
-		TRACE_STATE_TARGET_TIMESTAMP_HEADER,
-		TRACE_STATE_TARGET_TIMESTAMP_CONT,
-		TRACE_STATE_TARGET_TIMESTAMP_END,
-		TRACE_STATE_SKIP_FRAME,
-	} TraceState;
+		UNKNOWN,
+		IDLE,
+		TARGET_SOURCE_1B,
+		TARGET_SOURCE_2B,
+		TARGET_SOURCE_3B,
+		TARGET_SOURCE_4B,
+		TARGET_TIMESTAMP_HEADER,
+		TARGET_TIMESTAMP_CONT,
+		TARGET_TIMESTAMP_END,
+		SKIP_FRAME,
+	};
 
-	TraceState state = TRACE_STATE_IDLE;
+	TraceState state = TraceState::IDLE;
 	TraceIndicators traceIndicators{};
 
 	static constexpr uint32_t channels = 10;

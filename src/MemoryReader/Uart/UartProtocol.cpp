@@ -21,7 +21,7 @@ static inline void writeUint32LE(std::vector<uint8_t>& vec, uint32_t value)
     vec.push_back(static_cast<uint8_t>((value >> 24) & 0xFF));
 }
 
-static inline void writeFloatLE(std::vector<uint8_t>& vec, float value)
+[[maybe_unused]] static inline void writeFloatLE(std::vector<uint8_t>& vec, float value)
 {
     uint32_t temp;
     std::memcpy(&temp, &value, sizeof(float));
@@ -39,7 +39,7 @@ static inline uint32_t readUint32LE(const uint8_t* data)
            (static_cast<uint32_t>(data[2]) << 16) | (static_cast<uint32_t>(data[3]) << 24);
 }
 
-static inline float readFloatLE(const uint8_t* data)
+[[maybe_unused]] static inline float readFloatLE(const uint8_t* data)
 {
     uint32_t temp = readUint32LE(data);
     float value;

@@ -258,7 +258,7 @@ class VariableTableWindow
 	VariableHandler* variableHandler;
 	std::string* projectElfPath;
 	std::string* projectConfigPath;
-	spdlog::logger* logger;
+	[[maybe_unused]] spdlog::logger* logger;
 
 	Popup popup;
 	std::shared_ptr<GdbParser> parser;
