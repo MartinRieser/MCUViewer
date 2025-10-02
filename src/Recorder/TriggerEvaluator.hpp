@@ -7,7 +7,8 @@
 #include <map>
 #include <vector>
 
-#include "RecorderModule.hpp"
+// Note: TriggerConfig and trigger type enums are defined in RecorderModule.hpp
+// This header is included from RecorderModule.hpp after those definitions
 
 /**
  * @brief High-performance trigger condition evaluator

@@ -204,6 +204,9 @@ class RecorderBackend
 	virtual std::string getLastError() const = 0;
 };
 
+// Include TriggerEvaluator after type definitions to avoid circular dependency
+#include "TriggerEvaluator.hpp"
+
 /**
  * @brief Main recorder module class
  *
@@ -299,12 +302,6 @@ class RecorderModule
 	 */
 	bool sampleAndCheckTrigger();
 
-	/**
-	 * @brief Evaluate trigger condition for current sample
-	 * @param sample Current sample
-	 * @return true if trigger condition met
-	 */
-	bool evaluateTrigger(const RecorderSample& sample);
 
 	/**
 	 * @brief Calculate trigger index in circular buffer
@@ -346,9 +343,8 @@ class RecorderModule
 	// Threading
 	std::unique_ptr<std::thread> recorderThread;
 
-	// Trigger evaluation state
-	double lastValue = 0.0;
-	bool lastState = false;
+	// Trigger evaluator
+	TriggerEvaluator triggerEvaluator;
 
 	// Last error
 	std::string lastError;

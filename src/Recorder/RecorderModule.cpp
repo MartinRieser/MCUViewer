@@ -134,6 +134,9 @@ bool RecorderModule::setupTrigger(const TriggerConfig& trigger)
 
 	triggerConfig = trigger;
 
+	// Setup trigger evaluator
+	triggerEvaluator.setup(trigger);
+
 	if (logger)
 		logger->info("Trigger configured: type={}, address=0x{:08X}, value1={}",
 					 static_cast<int>(trigger.type), trigger.varAddress, trigger.value1);
@@ -157,9 +160,10 @@ bool RecorderModule::arm(TriggerMode mode)
 	bufferWriteIndex = 0;
 	samplesInBuffer = 0;
 	capturedData.clear();
-	lastValue = 0.0;
-	lastState = false;
 	forceTriggerFlag = false;
+
+	// Reset trigger evaluator
+	triggerEvaluator.reset();
 
 	// Reset statistics
 	stats = RecorderStats{};
@@ -367,9 +371,8 @@ void RecorderModule::recorderThreadFunc()
 				// Reset for next trigger
 				bufferWriteIndex = 0;
 				samplesInBuffer = 0;
-				lastValue = 0.0;
-				lastState = false;
 				forceTriggerFlag = false;
+				triggerEvaluator.reset();
 				state = RecorderState::ARMED;
 
 				if (logger)
@@ -428,7 +431,7 @@ bool RecorderModule::sampleAndCheckTrigger()
 
 	if (triggerConfig.type != TriggerType::NONE)
 	{
-		if (evaluateTrigger(sample))
+		if (triggerEvaluator.evaluate(sample.values))
 		{
 			triggerSampleIndex = writeIdx;
 			return true;
@@ -438,76 +441,6 @@ bool RecorderModule::sampleAndCheckTrigger()
 	return false;
 }
 
-bool RecorderModule::evaluateTrigger(const RecorderSample& sample)
-{
-	// Get trigger variable value
-	auto it = sample.values.find(triggerConfig.varAddress);
-	if (it == sample.values.end())
-		return false;
-
-	double value = it->second;
-
-	switch (triggerConfig.type)
-	{
-		case TriggerType::NONE:
-			return false;
-
-		case TriggerType::EDGE:
-		{
-			EdgeCondition condition = static_cast<EdgeCondition>(triggerConfig.condition);
-			double threshold = triggerConfig.value1;
-
-			bool currentState = (value >= threshold);
-
-			bool triggered = false;
-			if (condition == EdgeCondition::RISING && !lastState && currentState)
-				triggered = true;
-			else if (condition == EdgeCondition::FALLING && lastState && !currentState)
-				triggered = true;
-			else if (condition == EdgeCondition::BOTH && lastState != currentState)
-				triggered = true;
-
-			lastState = currentState;
-			lastValue = value;
-
-			return triggered;
-		}
-
-		case TriggerType::LEVEL:
-		{
-			LevelCondition condition = static_cast<LevelCondition>(triggerConfig.condition);
-			double threshold = triggerConfig.value1;
-
-			if (condition == LevelCondition::ABOVE)
-				return value > threshold;
-			else
-				return value < threshold;
-		}
-
-		case TriggerType::WINDOW:
-		{
-			WindowCondition condition = static_cast<WindowCondition>(triggerConfig.condition);
-			double lower = std::min(triggerConfig.value1, triggerConfig.value2);
-			double upper = std::max(triggerConfig.value1, triggerConfig.value2);
-
-			bool inside = (value >= lower && value <= upper);
-
-			if (condition == WindowCondition::INSIDE)
-				return inside;
-			else
-				return !inside;
-		}
-
-		case TriggerType::LOGIC:
-			// TODO: Implement logic trigger (boolean combinations)
-			if (logger)
-				logger->warn("LOGIC trigger not yet implemented");
-			return false;
-
-		default:
-			return false;
-	}
-}
 
 void RecorderModule::extractSamples()
 {
