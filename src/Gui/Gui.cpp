@@ -32,6 +32,7 @@ Gui::Gui(PlotHandler* plotHandler, VariableHandler* variableHandler, ConfigHandl
 	plotEditWindow = std::make_shared<PlotEditWindow>(plotHandler, plotGroupHandler, variableHandler);
 	plotsTree = std::make_shared<PlotsTree>(viewerDataHandler, plotHandler, plotGroupHandler, variableHandler, plotEditWindow, fileHandler, logger);
 	variableTable = std::make_shared<VariableTableWindow>(viewerDataHandler, plotHandler, variableHandler, &projectElfPath, &projectConfigPath, logger);
+	recorderControl = std::make_shared<RecorderControlWindow>();
 
 	variableHandler->renameCallback = [&](std::string oldName, std::string newName)
 	{
@@ -187,6 +188,10 @@ void Gui::mainThread(std::string externalPath)
 		drawAboutWindow();
 		drawPreferencesWindow();
 
+		// Draw recorder control window
+		if (showRecorderControlWindow)
+			recorderControl->draw(viewerDataHandler->getRecorderModule(), variableHandler);
+
 		if (ImGui::Begin("Trace Viewer"))
 		{
 			activeView = ActiveViewType::TraceViewer;
@@ -282,6 +287,7 @@ void Gui::drawMenu()
 	}
 	if (ImGui::BeginMenu("Window"))
 	{
+		ImGui::MenuItem("Recorder Control", NULL, &showRecorderControlWindow, active);
 		ImGui::MenuItem("Preferences", NULL, &showPreferencesWindow, active);
 		ImGui::EndMenu();
 	}

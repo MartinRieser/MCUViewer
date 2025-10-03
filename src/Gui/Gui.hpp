@@ -13,6 +13,7 @@
 #include "ConfigHandler.hpp"
 #include "GuiPlotEdit.hpp"
 #include "GuiPlotsTree.hpp"
+#include "GuiRecorderControl.hpp"
 #include "GuiVarTable.hpp"
 #include "GuiVariablesEdit.hpp"
 #include "IDebugProbe.hpp"
@@ -61,6 +62,7 @@ class Gui
 	bool showAboutWindow = false;
 	bool showPreferencesWindow = false;
 	bool showSelectVariablesWindow = false;
+	bool showRecorderControlWindow = false;
 
 	IFileHandler* fileHandler;
 	PlotHandler* tracePlotHandler;
@@ -104,6 +106,7 @@ class Gui
 	std::shared_ptr<PlotEditWindow> plotEditWindow;
 	std::shared_ptr<VariableTableWindow> variableTable;
 	std::shared_ptr<PlotsTree> plotsTree;
+	std::shared_ptr<RecorderControlWindow> recorderControl;
 
 #ifdef __APPLE__
 	std::string externalProjectPath;
