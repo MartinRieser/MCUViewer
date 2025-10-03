@@ -14,6 +14,11 @@ ViewerDataHandler::ViewerDataHandler(PlotGroupHandler* plotGroupHandler, Variabl
 }
 ViewerDataHandler::~ViewerDataHandler()
 {
+	// Stop recorder thread first
+	recorderThreadRunning = false;
+	if (recorderThreadHandle && recorderThreadHandle->joinable())
+		recorderThreadHandle->join();
+
 	if (dataHandle.joinable())
 		dataHandle.join();
 }
@@ -33,6 +38,30 @@ std::string ViewerDataHandler::getLastReaderError() const
 void ViewerDataHandler::setDebugProbe(std::shared_ptr<IDebugProbe> probe)
 {
 	debugProbe = probe;
+}
+
+void ViewerDataHandler::setRecorderModule(std::shared_ptr<RecorderModule> recorder)
+{
+	// Stop old recorder thread if running
+	if (recorderThreadHandle && recorderThreadHandle->joinable())
+	{
+		recorderThreadRunning = false;
+		recorderThreadHandle->join();
+	}
+
+	recorderModule = recorder;
+
+	// Start new recorder thread if module is set
+	if (recorderModule)
+	{
+		recorderThreadRunning = true;
+		recorderThreadHandle = std::make_unique<std::thread>(&ViewerDataHandler::recorderHandler, this);
+	}
+}
+
+std::shared_ptr<RecorderModule> ViewerDataHandler::getRecorderModule() const
+{
+	return recorderModule;
 }
 
 IDebugProbe::DebugProbeSettings ViewerDataHandler::getProbeSettings() const
@@ -247,4 +276,49 @@ void ViewerDataHandler::prepareCSVFile()
 	}
 	csvStreamer->prepareFile(settings.logFilePath);
 	csvStreamer->createHeader(headerNames);
+}
+
+void ViewerDataHandler::recorderHandler()
+{
+	if (logger)
+		logger->info("ViewerDataHandler: Recorder thread started");
+
+	while (recorderThreadRunning && !done)
+	{
+		if (!recorderModule)
+		{
+			std::this_thread::sleep_for(std::chrono::milliseconds(100));
+			continue;
+		}
+
+		RecorderState state = recorderModule->getState();
+
+		// Monitor recorder state transitions
+		switch (state)
+		{
+			case RecorderState::IDLE:
+			case RecorderState::CONFIGURED:
+			case RecorderState::ARMED:
+			case RecorderState::TRIGGERED:
+				// Just wait - recorder is managing itself
+				std::this_thread::sleep_for(std::chrono::milliseconds(10));
+				break;
+
+			case RecorderState::READY:
+				// Recording complete - data is ready for GUI to retrieve
+				// GUI will call recorderModule->getAllData() to get samples
+				std::this_thread::sleep_for(std::chrono::milliseconds(50));
+				break;
+
+			case RecorderState::ERROR:
+				// Error state - log it
+				if (logger)
+					logger->error("ViewerDataHandler: Recorder in ERROR state");
+				std::this_thread::sleep_for(std::chrono::milliseconds(100));
+				break;
+		}
+	}
+
+	if (logger)
+		logger->info("ViewerDataHandler: Recorder thread stopped");
 }

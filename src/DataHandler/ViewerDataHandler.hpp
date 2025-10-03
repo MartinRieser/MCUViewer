@@ -10,6 +10,7 @@
 #include "DataHandlerBase.hpp"
 #include "IDebugProbe.hpp"
 #include "MovingAverage.hpp"
+#include "RecorderModule.hpp"
 #include "VariableHandler.hpp"
 
 class ViewerDataHandler : public DataHandlerBase
@@ -41,6 +42,9 @@ class ViewerDataHandler : public DataHandlerBase
 
 	void setDebugProbe(std::shared_ptr<IDebugProbe> probe);
 
+	void setRecorderModule(std::shared_ptr<RecorderModule> recorder);
+	std::shared_ptr<RecorderModule> getRecorderModule() const;
+
 	Settings getSettings() const;
 	void setSettings(const Settings& newSettings);
 
@@ -56,6 +60,7 @@ class ViewerDataHandler : public DataHandlerBase
 
 	void updateVariables(double timestamp, const std::unordered_map<uint32_t, double>& values);
 	void dataHandler();
+	void recorderHandler();
 	void prepareCSVFile();
 	void createSampleList();
 
@@ -69,4 +74,9 @@ class ViewerDataHandler : public DataHandlerBase
 	std::unordered_map<std::string, double> csvEntry;
 
 	SampleListType sampleList;
+
+	// Recorder module and thread
+	std::shared_ptr<RecorderModule> recorderModule;
+	std::unique_ptr<std::thread> recorderThreadHandle;
+	std::atomic<bool> recorderThreadRunning{false};
 };
