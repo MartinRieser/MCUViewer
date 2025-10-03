@@ -627,20 +627,26 @@ assert(stats.postTriggerSamples == 200);
 
 ---
 
-### Task 3.8: ViewerDataHandler Integration
+### Task 3.8: ViewerDataHandler Integration ✅
 **Goal:** Add recorder thread to ViewerDataHandler
 
+**Completed:** 2025-10-03
+
 **Subtasks:**
-- ⬜ 3.8.1: Add `recorderModule` member to ViewerDataHandler
-- ⬜ 3.8.2: Add `setRecorderModule()` method
-- ⬜ 3.8.3: Implement `recorderHandler()` thread function
-- ⬜ 3.8.4: Add recorder state management
-- ⬜ 3.8.5: Ensure thread safety between live and recorder threads
+- ✅ 3.8.1: Add `recorderModule` member to ViewerDataHandler
+- ✅ 3.8.2: Add `setRecorderModule()` method
+- ✅ 3.8.3: Implement `recorderHandler()` thread function
+- ✅ 3.8.4: Add recorder state management
+- ✅ 3.8.5: Ensure thread safety between live and recorder threads
 
 **Acceptance Criteria:**
-- Recorder thread starts when module set
-- Live variables continue updating during recording
-- No race conditions or deadlocks
+- ✅ Recorder thread starts when module set
+- ✅ Live variables continue updating during recording
+- ✅ No race conditions or deadlocks
+
+**Files Modified:**
+- `src/DataHandler/ViewerDataHandler.hpp` - Added recorderModule member, setRecorderModule() method
+- `src/DataHandler/ViewerDataHandler.cpp` - Implemented recorderHandler() thread, state monitoring
 
 **Testing:**
 ```cpp
