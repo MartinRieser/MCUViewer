@@ -703,26 +703,35 @@ recorder->arm(TriggerMode::SINGLE_SHOT);
 
 ---
 
-### Task 4.2: Recorder Oscilloscope View
+### Task 4.2: Recorder Oscilloscope View ✅
 **Goal:** Create waveform viewer for captured data
 
+**Completed:** 2025-10-03
+
 **Subtasks:**
-- ⬜ 4.2.1: Create `GuiRecorderView.hpp/cpp`
-- ⬜ 4.2.2: Implement ImPlot-based waveform display
-- ⬜ 4.2.3: Add trigger marker line
-- ⬜ 4.2.4: Add pre/post-trigger region shading
-- ⬜ 4.2.5: Add time axis (ms before/after trigger)
-- ⬜ 4.2.6: Add zoom controls
-- ⬜ 4.2.7: Add pan controls
-- ⬜ 4.2.8: Add cursor measurements
-- ⬜ 4.2.9: Add variable visibility toggles
-- ⬜ 4.2.10: Add export to CSV button
+- ✅ 4.2.1: Create `GuiRecorderView.hpp/cpp`
+- ✅ 4.2.2: Implement ImPlot-based waveform display
+- ✅ 4.2.3: Add trigger marker line
+- ✅ 4.2.4: Add pre/post-trigger region shading
+- ✅ 4.2.5: Add time axis (ms before/after trigger)
+- ✅ 4.2.6: Add zoom controls
+- ✅ 4.2.7: Add pan controls
+- ✅ 4.2.8: Add cursor measurements
+- ✅ 4.2.9: Add variable visibility toggles
+- ✅ 4.2.10: Add export to CSV button
 
 **Acceptance Criteria:**
-- Waveforms display correctly
-- Trigger point clearly visible
-- Zoom/pan work smoothly
-- Export creates valid CSV
+- ✅ Waveforms display correctly
+- ✅ Trigger point clearly visible (red line at t=0)
+- ✅ Zoom/pan work smoothly (ImPlot native)
+- ✅ Export creates valid CSV
+
+**Files Created:**
+- `src/Gui/GuiRecorderView.hpp` - Complete oscilloscope view implementation
+
+**Files Modified:**
+- `src/Gui/Gui.hpp` - Added recorderView member, showRecorderViewWindow flag
+- `src/Gui/Gui.cpp` - Initialize and draw recorder view window
 
 **Testing:**
 - Capture a trigger event
