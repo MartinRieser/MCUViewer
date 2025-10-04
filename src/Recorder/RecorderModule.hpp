@@ -23,7 +23,7 @@ enum class RecorderState
 	ARMED,          // Waiting for trigger, collecting pre-trigger samples
 	TRIGGERED,      // Trigger fired, collecting post-trigger samples
 	READY,          // Recording complete, data ready for download
-	ERROR           // Error state
+	RECORDER_ERROR  // Error state
 };
 
 /**

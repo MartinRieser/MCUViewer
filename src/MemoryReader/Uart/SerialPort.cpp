@@ -13,7 +13,9 @@
     #include <setupapi.h>
     #include <devguid.h>
     #include <regstr.h>
-    #pragma comment(lib, "setupapi.lib")
+    #ifdef _MSC_VER
+        #pragma comment(lib, "setupapi.lib")
+    #endif
 #else
     #include <fcntl.h>
     #include <termios.h>
@@ -94,7 +96,8 @@ std::vector<SerialPortInfo> SerialPort::listPorts()
     for (int i = 1; i <= 256; i++)
     {
         std::string portName = "COM" + std::to_string(i);
-        HANDLE hPort = CreateFileA(("\\\\.\\") + portName).c_str(),
+        std::string fullPortName = "\\\\.\\\\" + portName;
+        HANDLE hPort = CreateFileA(fullPortName.c_str(),
                                    GENERIC_READ | GENERIC_WRITE,
                                    0,
                                    nullptr,
@@ -371,31 +374,31 @@ bool SerialPort::configure(BaudRate baudRate, uint8_t dataBits, Parity parity, S
     speed_t speed;
     switch (baudRate)
     {
-        case BaudRate::BAUD_9600:
+        case BaudRate::BR_9600:
             speed = B9600;
             break;
-        case BaudRate::BAUD_19200:
+        case BaudRate::BR_19200:
             speed = B19200;
             break;
-        case BaudRate::BAUD_38400:
+        case BaudRate::BR_38400:
             speed = B38400;
             break;
-        case BaudRate::BAUD_57600:
+        case BaudRate::BR_57600:
             speed = B57600;
             break;
-        case BaudRate::BAUD_115200:
+        case BaudRate::BR_115200:
             speed = B115200;
             break;
-        case BaudRate::BAUD_230400:
+        case BaudRate::BR_230400:
             speed = B230400;
             break;
 #ifdef B460800
-        case BaudRate::BAUD_460800:
+        case BaudRate::BR_460800:
             speed = B460800;
             break;
 #endif
 #ifdef B921600
-        case BaudRate::BAUD_921600:
+        case BaudRate::BR_921600:
             speed = B921600;
             break;
 #endif

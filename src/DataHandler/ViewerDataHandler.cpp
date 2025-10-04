@@ -310,7 +310,7 @@ void ViewerDataHandler::recorderHandler()
 				std::this_thread::sleep_for(std::chrono::milliseconds(50));
 				break;
 
-			case RecorderState::ERROR:
+			case RecorderState::RECORDER_ERROR:
 				// Error state - log it
 				if (logger)
 					logger->error("ViewerDataHandler: Recorder in ERROR state");

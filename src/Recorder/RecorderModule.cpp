@@ -221,7 +221,7 @@ void RecorderModule::disarm()
 	if (recorderThread && recorderThread->joinable())
 		recorderThread->join();
 
-	if (state != RecorderState::ERROR)
+	if (state != RecorderState::RECORDER_ERROR)
 		state = RecorderState::CONFIGURED;
 }
 
@@ -321,7 +321,7 @@ void RecorderModule::recorderThreadFunc()
 	// Calculate sleep time between samples
 	auto samplePeriod = std::chrono::microseconds(1000000 / config.sampleRateHz);
 
-	while (!shouldStop && state != RecorderState::ERROR)
+	while (!shouldStop && state != RecorderState::RECORDER_ERROR)
 	{
 		auto loopStart = std::chrono::steady_clock::now();
 
@@ -401,7 +401,7 @@ bool RecorderModule::sampleAndCheckTrigger()
 		lastError = "Failed to read variables: " + backend->getLastError();
 		if (logger)
 			logger->error("RecorderModule::sampleAndCheckTrigger: {}", lastError);
-		state = RecorderState::ERROR;
+		state = RecorderState::RECORDER_ERROR;
 		return false;
 	}
 

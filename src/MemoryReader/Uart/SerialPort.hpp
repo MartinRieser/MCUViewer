@@ -30,14 +30,14 @@ struct SerialPortInfo
  */
 enum class BaudRate : uint32_t
 {
-    BAUD_9600 = 9600,
-    BAUD_19200 = 19200,
-    BAUD_38400 = 38400,
-    BAUD_57600 = 57600,
-    BAUD_115200 = 115200,
-    BAUD_230400 = 230400,
-    BAUD_460800 = 460800,
-    BAUD_921600 = 921600
+    BR_9600 = 9600,
+    BR_19200 = 19200,
+    BR_38400 = 38400,
+    BR_57600 = 57600,
+    BR_115200 = 115200,
+    BR_230400 = 230400,
+    BR_460800 = 460800,
+    BR_921600 = 921600
 };
 
 /**
@@ -128,7 +128,7 @@ class SerialPort
      * @note Previous port connection will be closed if open
      */
     bool open(const std::string& portName,
-              BaudRate baudRate = BaudRate::BAUD_115200,
+              BaudRate baudRate = BaudRate::BR_115200,
               uint8_t dataBits = 8,
               Parity parity = Parity::NONE,
               StopBits stopBits = StopBits::ONE,

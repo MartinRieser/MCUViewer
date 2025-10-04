@@ -64,28 +64,28 @@ bool UartDebugProbe::startAcqusition(const DebugProbeSettings& probeSettings, st
 	switch (baudRate)
 	{
 		case 9600:
-			baudRateEnum = UartProtocol::BaudRate::BAUD_9600;
+			baudRateEnum = UartProtocol::BaudRate::BR_9600;
 			break;
 		case 19200:
-			baudRateEnum = UartProtocol::BaudRate::BAUD_19200;
+			baudRateEnum = UartProtocol::BaudRate::BR_19200;
 			break;
 		case 38400:
-			baudRateEnum = UartProtocol::BaudRate::BAUD_38400;
+			baudRateEnum = UartProtocol::BaudRate::BR_38400;
 			break;
 		case 57600:
-			baudRateEnum = UartProtocol::BaudRate::BAUD_57600;
+			baudRateEnum = UartProtocol::BaudRate::BR_57600;
 			break;
 		case 115200:
-			baudRateEnum = UartProtocol::BaudRate::BAUD_115200;
+			baudRateEnum = UartProtocol::BaudRate::BR_115200;
 			break;
 		case 230400:
-			baudRateEnum = UartProtocol::BaudRate::BAUD_230400;
+			baudRateEnum = UartProtocol::BaudRate::BR_230400;
 			break;
 		case 460800:
-			baudRateEnum = UartProtocol::BaudRate::BAUD_460800;
+			baudRateEnum = UartProtocol::BaudRate::BR_460800;
 			break;
 		case 921600:
-			baudRateEnum = UartProtocol::BaudRate::BAUD_921600;
+			baudRateEnum = UartProtocol::BaudRate::BR_921600;
 			break;
 		default:
 			logger->error("Unsupported baud rate: {}", baudRate);

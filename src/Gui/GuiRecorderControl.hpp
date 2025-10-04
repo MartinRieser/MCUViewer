@@ -245,7 +245,7 @@ class RecorderControlWindow
 			case RecorderState::READY:
 				ImGui::TextColored(ImVec4(0.0f, 1.0f, 0.0f, 1.0f), "READY - Data Available");
 				break;
-			case RecorderState::ERROR:
+			case RecorderState::RECORDER_ERROR:
 				ImGui::TextColored(ImVec4(1.0f, 0.0f, 0.0f, 1.0f), "ERROR");
 				break;
 		}
