@@ -370,9 +370,9 @@ void Gui::drawAcqusitionSettingsWindow(ActiveViewType type)
 	if (showAcqusitionSettingsWindow)
 		ImGui::OpenPopup("Acqusition Settings");
 
-	ImGui::SetNextWindowPos(ImGui::GetMainViewport()->GetCenter(), ImGuiCond_Appearing, ImVec2(0.5f, 0.5f));
-	ImGui::SetNextWindowSize(ImVec2(700, 500), ImGuiCond_Appearing);
-	if (ImGui::BeginPopupModal("Acqusition Settings", &showAcqusitionSettingsWindow, ImGuiWindowFlags_AlwaysAutoResize))
+	ImGui::SetNextWindowPos(ImGui::GetMainViewport()->GetCenter(), ImGuiCond_FirstUseEver, ImVec2(0.5f, 0.5f));
+	ImGui::SetNextWindowSize(ImVec2(700 * GuiHelper::contentScale, 600 * GuiHelper::contentScale), ImGuiCond_FirstUseEver);
+	if (ImGui::BeginPopupModal("Acqusition Settings", &showAcqusitionSettingsWindow, 0))
 	{
 		if (type == ActiveViewType::VarViewer)
 			acqusitionSettingsViewer();
