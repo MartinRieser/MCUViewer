@@ -150,6 +150,7 @@ void ViewerDataHandler::dataHandler()
 			// Check if recorder is active and get required sample rate
 			bool recorderActive = false;
 			uint32_t recorderSampleRate = settings.sampleFrequencyHz;
+			static bool wasRecorderActive = false;
 
 			if (recorderModule)
 			{
@@ -159,9 +160,20 @@ void ViewerDataHandler::dataHandler()
 					recorderActive = true;
 					RecorderConfig recConfig = recorderModule->getConfig();
 					recorderSampleRate = recConfig.sampleRateHz;
+
+					// Reset timing when recorder first becomes active
+					if (!wasRecorderActive)
+					{
+						timer = 0;
+						lastT = 0.0;
+						start = std::chrono::steady_clock::now();
+					}
+
 					createRecorderSampleList();  // Update recorder sample list
 				}
 			}
+
+			wasRecorderActive = recorderActive;
 
 			// Choose which variables to sample based on mode
 			const auto& activeSampleList = recorderActive ? recorderSampleList : sampleList;
