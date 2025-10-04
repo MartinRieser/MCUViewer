@@ -558,6 +558,9 @@ void RecorderModule::extractSamples()
 	if (totalSamples == 0)
 		return;
 
+	// Only extract the configured buffer size, not all samples that may have accumulated
+	uint32_t samplesToExtract = std::min(totalSamples, config.bufferSamples);
+
 	// Calculate where to start reading from circular buffer
 	uint32_t currentWriteIdx = bufferWriteIndex.load();
 	uint32_t startIdx;
@@ -569,17 +572,21 @@ void RecorderModule::extractSamples()
 	}
 	else
 	{
-		// Buffer is full, start from oldest sample
+		// Buffer is full (or overfull), start from oldest sample
+		// If buffer wrapped, start from current write position (oldest sample)
 		startIdx = currentWriteIdx;
 	}
 
-	// Extract all samples in order
-	capturedData.reserve(totalSamples);
-	for (uint32_t i = 0; i < totalSamples; i++)
+	// Extract samples in order
+	capturedData.reserve(samplesToExtract);
+	for (uint32_t i = 0; i < samplesToExtract; i++)
 	{
 		uint32_t idx = (startIdx + i) % config.bufferSamples;
 		capturedData.push_back(circularBuffer[idx]);
 	}
+
+	// Update totalSamples to reflect actual extracted count
+	totalSamples = samplesToExtract;
 
 	// Calculate statistics
 	stats.totalSamples = totalSamples;
