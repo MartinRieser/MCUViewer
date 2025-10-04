@@ -27,6 +27,51 @@
             "type": "shell",
             "label": "Run application with gdbserver",
             "command": "Start-Process -FilePath ./launch/launch.bat"
+        },
+        {
+            "type": "shell",
+            "label": "Build MCUViewer (UCRT64)",
+            "command": "C:\\msys64\\msys2_shell.cmd",
+            "args": [
+                "-ucrt64",
+                "-defterm",
+                "-no-start",
+                "-here",
+                "-c",
+                "mkdir -p build && cd build && cmake .. && ninja"
+            ],
+            "options": {
+                "cwd": "${workspaceFolder}"
+            },
+            "problemMatcher": ["$gcc"],
+            "group": "build"
+        },
+        {
+            "type": "shell",
+            "label": "Rebuild MCUViewer (UCRT64)",
+            "command": "C:\\msys64\\msys2_shell.cmd",
+            "args": [
+                "-ucrt64",
+                "-defterm",
+                "-no-start",
+                "-here",
+                "-c",
+                "rm -rf build && mkdir build && cd build && cmake .. && ninja"
+            ],
+            "options": {
+                "cwd": "${workspaceFolder}"
+            },
+            "problemMatcher": ["$gcc"],
+            "group": "build"
+        },
+        {
+            "type": "shell",
+            "label": "Run MCUViewer",
+            "command": "${workspaceFolder}\\build\\MCUViewer.exe",
+            "options": {
+                "cwd": "${workspaceFolder}\\build"
+            },
+            "problemMatcher": []
         }
     ],
     "version": "2.0.0"
