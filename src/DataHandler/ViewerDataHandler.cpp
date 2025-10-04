@@ -147,30 +147,28 @@ void ViewerDataHandler::dataHandler()
 				timer++;
 			}
 
-			else if (period > ((1.0 / settings.sampleFrequencyHz) * timer))
+			// Check if recorder is active and get required sample rate
+			bool recorderActive = false;
+			uint32_t recorderSampleRate = settings.sampleFrequencyHz;
+
+			if (recorderModule)
 			{
-				// Check if recorder is active and switch mode
-				bool recorderActive = false;
-				uint32_t recorderSampleRate = settings.sampleFrequencyHz;
-
-				if (recorderModule)
+				RecorderState recState = recorderModule->getState();
+				if (recState == RecorderState::ARMED || recState == RecorderState::TRIGGERED)
 				{
-					RecorderState recState = recorderModule->getState();
-					if (recState == RecorderState::ARMED || recState == RecorderState::TRIGGERED)
-					{
-						recorderActive = true;
-						RecorderConfig recConfig = recorderModule->getConfig();
-						recorderSampleRate = recConfig.sampleRateHz;
-						createRecorderSampleList();  // Update recorder sample list
-					}
+					recorderActive = true;
+					RecorderConfig recConfig = recorderModule->getConfig();
+					recorderSampleRate = recConfig.sampleRateHz;
+					createRecorderSampleList();  // Update recorder sample list
 				}
+			}
 
-				// Choose which variables to sample based on mode
-				const auto& activeSampleList = recorderActive ? recorderSampleList : sampleList;
-				uint32_t activeSampleRate = recorderActive ? recorderSampleRate : settings.sampleFrequencyHz;
+			// Choose which variables to sample based on mode
+			const auto& activeSampleList = recorderActive ? recorderSampleList : sampleList;
+			uint32_t activeSampleRate = recorderActive ? recorderSampleRate : settings.sampleFrequencyHz;
 
-				// Adjust timing for recorder sample rate
-				if (period > ((1.0 / activeSampleRate) * timer))
+			// Sample at the active rate (viewer or recorder)
+			if (period > ((1.0 / activeSampleRate) * timer))
 				{
 					std::unordered_map<uint32_t, double> rawValues;
 
@@ -233,7 +231,6 @@ void ViewerDataHandler::dataHandler()
 					lastT = period;
 					timer++;
 				}
-			}
 		}
 		else
 			std::this_thread::sleep_for(std::chrono::milliseconds(20));
