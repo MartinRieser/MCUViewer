@@ -44,3 +44,4 @@ test/MCUViewer_test/.settings/
 test/Uart/UartProtocolTest
 test/Uart/SerialPortTest
 test/Uart/UartSimulatorTest
+.claude/settings.local.json

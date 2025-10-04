@@ -88,7 +88,7 @@ class PlotEditWindow
 				popup.show("Error!", "Plot already exists!", 1.5f);
 		}
 
-		const char* plotTypes[] = {"curve", "bar", "table", "XY"};
+		const char* plotTypes[] = {"curve", "bar", "table", "XY", "recorder"};
 		int32_t typeCombo = (int32_t)editedPlot->getType();
 		GuiHelper::drawTextAlignedToSize("type:", alignment);
 		ImGui::SameLine();

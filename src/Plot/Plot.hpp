@@ -36,7 +36,8 @@ class Plot
 		CURVE = 0,
 		BAR = 1,
 		TABLE = 2,
-		XY = 3
+		XY = 3,
+		RECORDER = 4
 	};
 
 	enum class Domain : uint8_t
@@ -146,6 +147,30 @@ class Plot
 	std::string getSeriesValueString(const std::string& name, double value);
 
 	int32_t statisticsSeries = 0;
+
+	/* Recorder-specific properties */
+	struct RecorderSettings
+	{
+		uint32_t bufferSamples = 1000;
+		uint32_t sampleRateHz = 100;
+		uint8_t preTriggerPercent = 80;
+
+		// Trigger settings
+		int triggerType = 0; // 0=None, 1=Edge, 2=Level, 3=Window, 4=Logic
+		std::string triggerVariable = "";
+		int triggerCondition = 0;
+		double triggerValue1 = 0.0;
+		double triggerValue2 = 0.0;
+		double triggerHysteresis = 0.0;
+
+		// Recording state
+		bool isArmed = false;
+		bool isTriggered = false;
+		bool hasData = false;
+	};
+
+	RecorderSettings recorderSettings;
+	RecorderSettings& getRecorderSettings() { return recorderSettings; }
 
    private:
 	std::string name;

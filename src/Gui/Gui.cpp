@@ -11,8 +11,10 @@
 #include <utility>
 
 #include "PlotHandler.hpp"
+#include "RecorderModule.hpp"
 #include "Statistics.hpp"
 #include "StlinkDebugProbe.hpp"
+#include "StlinkRecorderBackend.hpp"
 #include "glfw3.h"
 #include "imgui_impl_glfw.h"
 #include "imgui_impl_opengl3.h"
@@ -32,8 +34,6 @@ Gui::Gui(PlotHandler* plotHandler, VariableHandler* variableHandler, ConfigHandl
 	plotEditWindow = std::make_shared<PlotEditWindow>(plotHandler, plotGroupHandler, variableHandler);
 	plotsTree = std::make_shared<PlotsTree>(viewerDataHandler, plotHandler, plotGroupHandler, variableHandler, plotEditWindow, fileHandler, logger);
 	variableTable = std::make_shared<VariableTableWindow>(viewerDataHandler, plotHandler, variableHandler, &projectElfPath, &projectConfigPath, logger);
-	recorderControl = std::make_shared<RecorderControlWindow>();
-	recorderView = std::make_shared<RecorderViewWindow>();
 
 	variableHandler->renameCallback = [&](std::string oldName, std::string newName)
 	{
@@ -138,6 +138,11 @@ void Gui::mainThread(std::string externalPath)
 	debugProbeDevice = stlinkProbe;
 	viewerDataHandler->setDebugProbe(debugProbeDevice);
 
+	// Create recorder module with STLink backend
+	auto stlinkRecorderBackend = std::make_shared<StlinkRecorderBackend>(std::dynamic_pointer_cast<StlinkDebugProbe>(stlinkProbe));
+	auto recorderModule = std::make_shared<RecorderModule>(stlinkRecorderBackend, logger);
+	viewerDataHandler->setRecorderModule(recorderModule);
+
 #ifdef JLINK_AVAILABLE
 	jlinkTraceProbe = std::make_shared<JlinkTraceProbe>(logger);
 #endif
@@ -188,14 +193,6 @@ void Gui::mainThread(std::string externalPath)
 		drawMenu();
 		drawAboutWindow();
 		drawPreferencesWindow();
-
-		// Draw recorder control window
-		if (showRecorderControlWindow)
-			recorderControl->draw(viewerDataHandler->getRecorderModule(), variableHandler);
-
-		// Draw recorder view window
-		if (showRecorderViewWindow)
-			recorderView->draw(viewerDataHandler->getRecorderModule(), variableHandler);
 
 		if (ImGui::Begin("Trace Viewer"))
 		{
@@ -292,8 +289,6 @@ void Gui::drawMenu()
 	}
 	if (ImGui::BeginMenu("Window"))
 	{
-		ImGui::MenuItem("Recorder Control", NULL, &showRecorderControlWindow, active);
-		ImGui::MenuItem("Recorder View", NULL, &showRecorderViewWindow, active);
 		ImGui::MenuItem("Preferences", NULL, &showPreferencesWindow, active);
 		ImGui::EndMenu();
 	}

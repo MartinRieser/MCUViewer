@@ -61,6 +61,8 @@ void Gui::drawPlots()
 				drawPlotBar(plot);
 			else if (plot->getType() == Plot::Type::XY)
 				drawPlotXY(plot);
+			else if (plot->getType() == Plot::Type::RECORDER)
+				drawPlotRecorder(plot);
 		}
 
 		ImPlot::EndSubplots();
@@ -375,5 +377,355 @@ void Gui::handleDragRect(uint32_t id, Plot::DragRect& dragRect, ImPlotRect plotL
 	{
 		dragRect.setValueX0(0.0);
 		dragRect.setValueX1(0.0);
+	}
+}
+
+void Gui::drawPlotRecorder(std::shared_ptr<Plot> plot)
+{
+	auto& settings = plot->getRecorderSettings();
+	auto& seriesMap = plot->getSeriesMap();
+	auto recorderModule = viewerDataHandler->getRecorderModule();
+
+	// Get current state from recorder module
+	RecorderState recorderState = RecorderState::IDLE;
+	RecorderConfig currentConfig;
+	TriggerConfig currentTrigger;
+
+	if (recorderModule)
+	{
+		recorderState = recorderModule->getState();
+		currentConfig = recorderModule->getConfig();
+		currentTrigger = recorderModule->getTriggerConfig();
+	}
+
+	// Draw recorder controls in a child window above the plot
+	ImGui::BeginChild("RecorderControls", ImVec2(0, 160 * GuiHelper::contentScale), true);
+	{
+		// Status indicator
+		ImGui::Text("Status:");
+		ImGui::SameLine();
+
+		if (!recorderModule)
+		{
+			ImGui::TextColored(ImVec4(1.0f, 0.0f, 0.0f, 1.0f), "NO RECORDER MODULE");
+		}
+		else
+		{
+			switch (recorderState)
+			{
+				case RecorderState::IDLE:
+					ImGui::TextColored(ImVec4(0.7f, 0.7f, 0.7f, 1.0f), "IDLE");
+					break;
+				case RecorderState::CONFIGURED:
+					ImGui::TextColored(ImVec4(0.5f, 0.5f, 1.0f, 1.0f), "CONFIGURED");
+					break;
+				case RecorderState::ARMED:
+					ImGui::TextColored(ImVec4(1.0f, 1.0f, 0.0f, 1.0f), "ARMED - Waiting for Trigger");
+					break;
+				case RecorderState::TRIGGERED:
+					ImGui::TextColored(ImVec4(1.0f, 0.5f, 0.0f, 1.0f), "TRIGGERED - Recording");
+					break;
+				case RecorderState::READY:
+					ImGui::TextColored(ImVec4(0.0f, 1.0f, 0.0f, 1.0f), "READY - Data Available");
+					break;
+				case RecorderState::RECORDER_ERROR:
+					ImGui::TextColored(ImVec4(1.0f, 0.0f, 0.0f, 1.0f), "ERROR");
+					break;
+			}
+		}
+
+		ImGui::SameLine();
+		ImGui::Dummy(ImVec2(20, 0));
+		ImGui::SameLine();
+
+		// Configuration controls
+		bool canConfigure = (recorderState == RecorderState::IDLE || recorderState == RecorderState::CONFIGURED);
+		if (!canConfigure)
+			ImGui::BeginDisabled();
+
+		ImGui::Text("Samples:");
+		ImGui::SameLine();
+		ImGui::SetNextItemWidth(100);
+		int bufferSamples = static_cast<int>(settings.bufferSamples);
+		if (ImGui::InputInt("##samples", &bufferSamples, 100, 1000))
+		{
+			settings.bufferSamples = std::max(100, std::min(100000, bufferSamples));
+			if (recorderModule)
+			{
+				currentConfig.bufferSamples = settings.bufferSamples;
+				recorderModule->configure(currentConfig);
+			}
+		}
+
+		ImGui::SameLine();
+		ImGui::Text("Rate (Hz):");
+		ImGui::SameLine();
+		ImGui::SetNextItemWidth(100);
+		int sampleRate = static_cast<int>(settings.sampleRateHz);
+		if (ImGui::InputInt("##rate", &sampleRate, 10, 100))
+		{
+			settings.sampleRateHz = std::max(1, std::min(10000, sampleRate));
+			if (recorderModule)
+			{
+				currentConfig.sampleRateHz = settings.sampleRateHz;
+				recorderModule->configure(currentConfig);
+			}
+		}
+
+		ImGui::SameLine();
+		ImGui::Text("Pre-Trigger:");
+		ImGui::SameLine();
+		ImGui::SetNextItemWidth(150);
+		int preTrigger = static_cast<int>(settings.preTriggerPercent);
+		if (ImGui::SliderInt("##pretrigger", &preTrigger, 0, 99, "%d%%"))
+		{
+			settings.preTriggerPercent = static_cast<uint8_t>(preTrigger);
+			if (recorderModule)
+			{
+				currentTrigger.preTriggerPercent = settings.preTriggerPercent;
+				recorderModule->setupTrigger(currentTrigger);
+			}
+		}
+
+		if (!canConfigure)
+			ImGui::EndDisabled();
+
+		// Trigger configuration
+		const char* triggerTypes[] = {"None", "Edge", "Level", "Window", "Logic"};
+		ImGui::Text("Trigger:");
+		ImGui::SameLine();
+		ImGui::SetNextItemWidth(120);
+		ImGui::Combo("##trigtype", &settings.triggerType, triggerTypes, 5);
+
+		if (settings.triggerType != 0)
+		{
+			ImGui::SameLine();
+			ImGui::Text("Variable:");
+			ImGui::SameLine();
+			ImGui::SetNextItemWidth(150);
+
+			// Create dropdown with variables from seriesMap
+			if (ImGui::BeginCombo("##trigvar", settings.triggerVariable.c_str()))
+			{
+				for (const auto& [varName, series] : seriesMap)
+				{
+					bool isSelected = (settings.triggerVariable == varName);
+					if (ImGui::Selectable(varName.c_str(), isSelected))
+						settings.triggerVariable = varName;
+					if (isSelected)
+						ImGui::SetItemDefaultFocus();
+				}
+				ImGui::EndCombo();
+			}
+
+			ImGui::SameLine();
+			ImGui::Text("Threshold:");
+			ImGui::SameLine();
+			ImGui::SetNextItemWidth(100);
+			ImGui::InputDouble("##threshold", &settings.triggerValue1);
+		}
+
+		// Show added variables with visibility toggles
+		if (!seriesMap.empty())
+		{
+			ImGui::Separator();
+			ImGui::Text("Variables:");
+			ImGui::SameLine();
+			for (auto& [varName, series] : seriesMap)
+			{
+				Variable::Color color = series->var->getColor();
+				ImVec4 col = {color.r, color.g, color.b, color.a};
+				ImGui::ColorButton(("##color_" + varName).c_str(), col, ImGuiColorEditFlags_NoInputs | ImGuiColorEditFlags_NoTooltip, ImVec2(10 * GuiHelper::contentScale, 10 * GuiHelper::contentScale));
+				ImGui::SameLine();
+				ImGui::Checkbox(varName.c_str(), &series->visible);
+				ImGui::SameLine();
+			}
+			ImGui::NewLine();
+		}
+
+		// Control buttons
+		ImGui::Separator();
+		if (recorderModule)
+		{
+			// Configure recorder with selected variables before arming
+			if (recorderState == RecorderState::IDLE || recorderState == RecorderState::CONFIGURED || recorderState == RecorderState::READY)
+			{
+				if (ImGui::Button("Arm Trigger", ImVec2(120, 25)))
+				{
+					// Configure recorder with variables from this plot
+					RecorderConfig config;
+					config.bufferSamples = settings.bufferSamples;
+					config.sampleRateHz = settings.sampleRateHz;
+
+					for (const auto& [varName, series] : seriesMap)
+					{
+						config.addresses.push_back(series->var->getAddress());
+						config.sizes.push_back(series->var->getSize());
+					}
+
+					TriggerConfig trigger;
+					trigger.type = static_cast<TriggerType>(settings.triggerType);
+					trigger.preTriggerPercent = settings.preTriggerPercent;
+					trigger.value1 = settings.triggerValue1;
+
+					// Find trigger variable address
+					if (!settings.triggerVariable.empty() && seriesMap.count(settings.triggerVariable))
+					{
+						trigger.varAddress = seriesMap.at(settings.triggerVariable)->var->getAddress();
+					}
+
+					recorderModule->configure(config);
+					recorderModule->setupTrigger(trigger);
+					recorderModule->arm(TriggerMode::SINGLE_SHOT);
+				}
+			}
+			else if (recorderState == RecorderState::ARMED || recorderState == RecorderState::TRIGGERED)
+			{
+				if (ImGui::Button("Disarm", ImVec2(120, 25)))
+				{
+					recorderModule->disarm();
+				}
+				ImGui::SameLine();
+				if (ImGui::Button("Force Trigger", ImVec2(120, 25)))
+				{
+					recorderModule->forceTrigger();
+				}
+			}
+
+			if (recorderState == RecorderState::READY)
+			{
+				ImGui::SameLine();
+				if (ImGui::Button("Reset", ImVec2(120, 25)))
+				{
+					recorderModule->reset();
+				}
+			}
+
+			// Allow resetting from error state
+			if (recorderState == RecorderState::RECORDER_ERROR)
+			{
+				if (ImGui::Button("Clear Error", ImVec2(120, 25)))
+				{
+					recorderModule->reset();
+				}
+				if (ImGui::IsItemHovered())
+				{
+					ImGui::BeginTooltip();
+					ImGui::Text("Common causes:");
+					ImGui::BulletText("Debug probe disconnected");
+					ImGui::BulletText("Target not powered");
+					ImGui::BulletText("Invalid variable addresses");
+					ImGui::BulletText("Target halted or not running");
+					ImGui::EndTooltip();
+				}
+				ImGui::SameLine();
+				ImGui::TextColored(ImVec4(1.0f, 0.5f, 0.0f, 1.0f), "Click 'Clear Error' to retry");
+			}
+		}
+	}
+	ImGui::EndChild();
+
+	// Draw plot area
+	if (ImPlot::BeginPlot(plot->getName().c_str(), ImVec2(-1, -1), ImPlotFlags_NoChild))
+	{
+		// Setup axes - must be done before any plotting
+		bool hasData = false;
+		std::vector<RecorderSample> data;
+		RecorderStats stats;
+		std::vector<double> timeAxis;
+
+		// Check if we have data and prepare axis limits
+		if (recorderModule && recorderState == RecorderState::READY)
+		{
+			try
+			{
+				data = recorderModule->getAllData();
+				stats = recorderModule->getStats();
+
+				if (!data.empty() && data.size() > 1)
+				{
+					hasData = true;
+					// Calculate time axis relative to trigger
+					timeAxis.reserve(data.size());
+					double triggerTime = stats.triggerTimestamp;
+					for (const auto& sample : data)
+						timeAxis.push_back(sample.timestamp - triggerTime);
+				}
+			}
+			catch (...)
+			{
+				hasData = false;
+			}
+		}
+
+		// Setup axes based on whether we have data
+		if (hasData && !timeAxis.empty())
+		{
+			double minTime = timeAxis.front();
+			double maxTime = timeAxis.back();
+			double margin = (maxTime - minTime) * 0.02;
+
+			ImPlot::SetupAxis(ImAxis_X1, "Time (s, relative to trigger)", ImPlotAxisFlags_None);
+			ImPlot::SetupAxisLimits(ImAxis_X1, minTime - margin, maxTime + margin, ImPlotCond_Always);
+			ImPlot::SetupAxis(ImAxis_Y1, "Value", ImPlotAxisFlags_AutoFit);
+		}
+		else
+		{
+			ImPlot::SetupAxis(ImAxis_X1, "Time (s, relative to trigger)", ImPlotAxisFlags_None);
+			ImPlot::SetupAxis(ImAxis_Y1, "Value", ImPlotAxisFlags_None);
+			ImPlot::SetupAxisLimits(ImAxis_X1, -1, 1, ImPlotCond_Once);
+			ImPlot::SetupAxisLimits(ImAxis_Y1, -0.1, 0.1, ImPlotCond_Once);
+		}
+
+		dragAndDropPlot(plot);
+
+		// Draw recorded data if available
+		if (hasData)
+		{
+			try
+			{
+				// Draw trigger marker at t=0
+				double triggerTimeZero = 0.0;
+				ImPlot::PushStyleColor(ImPlotCol_Line, ImVec4(1.0f, 0.0f, 0.0f, 1.0f));
+				ImPlot::PushStyleVar(ImPlotStyleVar_LineWeight, 2.0f);
+				ImPlot::PlotInfLines("Trigger", &triggerTimeZero, 1);
+				ImPlot::PopStyleVar();
+				ImPlot::PopStyleColor();
+
+				// Plot each variable
+				for (const auto& [varName, series] : seriesMap)
+				{
+					if (!series->visible)
+						continue;
+
+					uint32_t varAddress = series->var->getAddress();
+
+					// Extract values for this variable
+					std::vector<double> values;
+					values.reserve(data.size());
+					for (const auto& sample : data)
+					{
+						auto it = sample.values.find(varAddress);
+						if (it != sample.values.end())
+							values.push_back(it->second);
+						else
+							values.push_back(0.0);
+					}
+
+					// Plot with variable color
+					ImVec4 color = ImVec4(series->var->getColor().r, series->var->getColor().g, series->var->getColor().b, 1.0f);
+					ImPlot::SetNextLineStyle(color);
+					if (!values.empty() && values.size() == timeAxis.size())
+						ImPlot::PlotLine(varName.c_str(), timeAxis.data(), values.data(), timeAxis.size());
+				}
+			}
+			catch (...)
+			{
+				// Prevent crash if data access fails
+				ImGui::TextColored(ImVec4(1.0f, 0.0f, 0.0f, 1.0f), "Error accessing recorder data");
+			}
+		}
+
+		ImPlot::EndPlot();
 	}
 }

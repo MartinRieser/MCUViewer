@@ -13,8 +13,6 @@
 #include "ConfigHandler.hpp"
 #include "GuiPlotEdit.hpp"
 #include "GuiPlotsTree.hpp"
-#include "GuiRecorderControl.hpp"
-#include "GuiRecorderView.hpp"
 #include "GuiVarTable.hpp"
 #include "GuiVariablesEdit.hpp"
 #include "IDebugProbe.hpp"
@@ -63,8 +61,6 @@ class Gui
 	bool showAboutWindow = false;
 	bool showPreferencesWindow = false;
 	bool showSelectVariablesWindow = false;
-	bool showRecorderControlWindow = false;
-	bool showRecorderViewWindow = false;
 
 	IFileHandler* fileHandler;
 	PlotHandler* tracePlotHandler;
@@ -108,8 +104,6 @@ class Gui
 	std::shared_ptr<PlotEditWindow> plotEditWindow;
 	std::shared_ptr<VariableTableWindow> variableTable;
 	std::shared_ptr<PlotsTree> plotsTree;
-	std::shared_ptr<RecorderControlWindow> recorderControl;
-	std::shared_ptr<RecorderViewWindow> recorderView;
 
 #ifdef __APPLE__
 	std::string externalProjectPath;
@@ -138,6 +132,7 @@ class Gui
 	void drawPlotBar(std::shared_ptr<Plot> plot);
 	void drawPlotTable(std::shared_ptr<Plot> plot);
 	void drawPlotXY(std::shared_ptr<Plot> plot);
+	void drawPlotRecorder(std::shared_ptr<Plot> plot);
 	void handleMarkers(uint32_t id, Plot::Marker& marker, ImPlotRect plotLimits, std::function<void()> activeCallback);
 	void handleDragRect(uint32_t id, Plot::DragRect& dragRect, ImPlotRect plotLimits);
 	void dragAndDropPlot(std::shared_ptr<Plot> plot);
