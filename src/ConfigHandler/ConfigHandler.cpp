@@ -6,6 +6,7 @@
 
 #include "IDebugProbe.hpp"
 #include "ITraceProbe.hpp"
+#include "RecorderModule.hpp"
 
 /* TODO refactor whole config and persistent storage handling */
 ConfigHandler::ConfigHandler(const std::string& configFilePath, PlotHandler* plotHandler, PlotHandler* tracePlotHandler, PlotGroupHandler* plotGroupHandler, VariableHandler* variableHandler, ViewerDataHandler* viewerDataHandler, TraceDataHandler* traceDataHandler, spdlog::logger* logger)
@@ -302,6 +303,37 @@ bool ConfigHandler::readConfigFile(std::string& elfPath)
 	getValue("trace_settings", "should_log", traceSettings.shouldLog);
 	traceSettings.logFilePath = ini->get("trace_settings").get("log_directory");
 
+	// Load recorder configuration if present
+	RecorderConfig recorderConfig{};
+	TriggerConfig triggerConfig{};
+	bool hasRecorderConfig = false;
+
+	try
+	{
+		if (ini->has("recorder"))
+		{
+			getValue("recorder", "buffer_samples", recorderConfig.bufferSamples);
+			getValue("recorder", "sample_rate_hz", recorderConfig.sampleRateHz);
+			getValue("recorder", "use_hardware_recording", recorderConfig.useHardwareRecording);
+
+			uint32_t triggerType = 0;
+			getValue("recorder", "trigger_type", triggerType);
+			triggerConfig.type = static_cast<TriggerType>(triggerType);
+			getValue("recorder", "trigger_var_address", triggerConfig.varAddress);
+			getValue("recorder", "trigger_condition", triggerConfig.condition);
+			getValue("recorder", "trigger_value1", triggerConfig.value1);
+			getValue("recorder", "trigger_value2", triggerConfig.value2);
+			getValue("recorder", "trigger_hysteresis", triggerConfig.hysteresis);
+			getValue("recorder", "pre_trigger_percent", triggerConfig.preTriggerPercent);
+
+			hasRecorderConfig = true;
+		}
+	}
+	catch (const std::exception& ex)
+	{
+		logger->warn("Failed to load recorder config: {}", ex.what());
+	}
+
 	/* TODO magic numbers (lots of them)! */
 	if (traceSettings.timeout == 0)
 		traceSettings.timeout = 2;
@@ -337,6 +369,39 @@ bool ConfigHandler::readConfigFile(std::string& elfPath)
 
 	traceDataHandler->setSettings(traceSettings);
 	traceDataHandler->setProbeSettings(traceProbeSettings);
+
+	// Apply recorder configuration if available and recorder module exists
+	if (hasRecorderConfig)
+	{
+		auto recorderModule = viewerDataHandler->getRecorderModule();
+		if (recorderModule)
+		{
+			// Note: addresses and sizes are not restored here - they depend on
+			// which variables the user selects in the GUI. The GUI will need to
+			// call configure() with the selected variables.
+			// We only restore basic settings that can be applied immediately.
+			logger->info("Loaded recorder config: {} samples @ {} Hz, pre-trigger: {}%",
+				recorderConfig.bufferSamples, recorderConfig.sampleRateHz, triggerConfig.preTriggerPercent);
+
+			// Store these settings in the recorder for GUI to use
+			// The GUI will combine these with selected variables when configuring
+			RecorderConfig tempConfig = recorderConfig;
+			tempConfig.addresses.clear();
+			tempConfig.sizes.clear();
+
+			// Only configure if we have valid settings
+			if (recorderConfig.bufferSamples > 0 && recorderConfig.sampleRateHz > 0)
+			{
+				recorderModule->configure(tempConfig);
+
+				// Only setup trigger if we have a valid trigger type
+				if (triggerConfig.type != TriggerType::NONE)
+				{
+					recorderModule->setupTrigger(triggerConfig);
+				}
+			}
+		}
+	}
 
 	return true;
 }
@@ -413,6 +478,26 @@ mINI::INIStructure ConfigHandler::prepareSaveConfigFile(const std::string& elfPa
 	(configIni)["trace_settings"]["probe_SN"] = traceProbeSettings.serialNumber;
 	(configIni)["trace_settings"]["should_log"] = traceSettings.shouldLog ? std::string("true") : std::string("false");
 	(configIni)["trace_settings"]["log_directory"] = traceSettings.logFilePath;
+
+	// Save recorder configuration if recorder module exists
+	auto recorderModule = viewerDataHandler->getRecorderModule();
+	if (recorderModule)
+	{
+		RecorderConfig recorderConfig = recorderModule->getConfig();
+		TriggerConfig triggerConfig = recorderModule->getTriggerConfig();
+
+		(configIni)["recorder"]["buffer_samples"] = std::to_string(recorderConfig.bufferSamples);
+		(configIni)["recorder"]["sample_rate_hz"] = std::to_string(recorderConfig.sampleRateHz);
+		(configIni)["recorder"]["use_hardware_recording"] = recorderConfig.useHardwareRecording ? std::string("true") : std::string("false");
+
+		(configIni)["recorder"]["trigger_type"] = std::to_string(static_cast<uint32_t>(triggerConfig.type));
+		(configIni)["recorder"]["trigger_var_address"] = std::to_string(triggerConfig.varAddress);
+		(configIni)["recorder"]["trigger_condition"] = std::to_string(triggerConfig.condition);
+		(configIni)["recorder"]["trigger_value1"] = std::to_string(triggerConfig.value1);
+		(configIni)["recorder"]["trigger_value2"] = std::to_string(triggerConfig.value2);
+		(configIni)["recorder"]["trigger_hysteresis"] = std::to_string(triggerConfig.hysteresis);
+		(configIni)["recorder"]["pre_trigger_percent"] = std::to_string(triggerConfig.preTriggerPercent);
+	}
 
 	uint32_t varId = 0;
 	for (std::shared_ptr<Variable> var : *variableHandler)

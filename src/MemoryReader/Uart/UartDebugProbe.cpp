@@ -45,7 +45,8 @@ bool UartDebugProbe::startAcqusition(const DebugProbeSettings& probeSettings, st
 
 	if (isRunning)
 	{
-		logger->warn("Acquisition already running");
+		lastErrorMsg = "Acquisition already running";
+		logger->warn("{}", lastErrorMsg);
 		return false;
 	}
 
@@ -109,6 +110,7 @@ bool UartDebugProbe::startAcqusition(const DebugProbeSettings& probeSettings, st
 	// Send GET_INFO to verify connection
 	if (!sendGetInfo())
 	{
+		// Error message already set by sendGetInfo()
 		serialPort->close();
 		return false;
 	}
@@ -154,6 +156,8 @@ std::optional<IDebugProbe::varEntryType> UartDebugProbe::readSingleEntry()
 
 bool UartDebugProbe::readMemory(uint32_t address, uint8_t* buf, uint32_t size)
 {
+	std::lock_guard<std::mutex> lock(mtx);
+
 	if (!isValid())
 	{
 		lastErrorMsg = "Probe not connected";
@@ -173,6 +177,7 @@ bool UartDebugProbe::readMemory(uint32_t address, uint8_t* buf, uint32_t size)
 	UartProtocol::Packet response;
 	if (!sendAndReceive(packet, response, UartProtocol::CommandCode::READ_MEMORY_RESP))
 	{
+		lastErrorMsg = "Failed to receive READ_MEMORY response (timeout or invalid packet)";
 		return false;
 	}
 
@@ -209,6 +214,8 @@ bool UartDebugProbe::readMemory(uint32_t address, uint8_t* buf, uint32_t size)
 
 bool UartDebugProbe::writeMemory(uint32_t address, uint8_t* buf, uint32_t size)
 {
+	std::lock_guard<std::mutex> lock(mtx);
+
 	if (!isValid())
 	{
 		lastErrorMsg = "Probe not connected";
@@ -231,6 +238,7 @@ bool UartDebugProbe::writeMemory(uint32_t address, uint8_t* buf, uint32_t size)
 	UartProtocol::Packet response;
 	if (!sendAndReceive(packet, response, UartProtocol::CommandCode::WRITE_MEMORY_RESP))
 	{
+		lastErrorMsg = "Failed to receive WRITE_MEMORY response (timeout or invalid packet)";
 		return false;
 	}
 
@@ -279,6 +287,7 @@ bool UartDebugProbe::sendAndReceive(const std::vector<uint8_t>& requestPacket, U
 	// Wait for response
 	if (!receivePacket(responsePacket, timeoutMs))
 	{
+		// Error message already set by receivePacket()
 		return false;
 	}
 
