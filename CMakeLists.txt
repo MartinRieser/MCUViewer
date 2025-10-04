@@ -335,6 +335,11 @@ add_custom_command(TARGET ${EXECUTABLE} POST_BUILD
     ${CMAKE_CURRENT_SOURCE_DIR}/imgui.ini
     ${CMAKE_BINARY_DIR}/imgui.ini)
 
+add_custom_command(TARGET ${EXECUTABLE} POST_BUILD
+    COMMAND ${CMAKE_COMMAND} -E copy_directory
+    ${CMAKE_CURRENT_SOURCE_DIR}/third_party/stlink/chips
+    ${CMAKE_BINARY_DIR}/chips)
+
 install(TARGETS ${EXECUTABLE} RUNTIME DESTINATION ${INSTALL_PATH} COMPONENT applications)
 install(FILES ${CMAKE_CURRENT_SOURCE_DIR}/imgui.ini DESTINATION ${INSTALL_PATH})
 install(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/third_party/stlink/chips DESTINATION ${INSTALL_PATH})
