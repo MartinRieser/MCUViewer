@@ -552,10 +552,17 @@ void Gui::drawPlotRecorder(std::shared_ptr<Plot> plot)
 			{
 				if (ImGui::Button("Arm Trigger", ImVec2(120, 25)))
 				{
+					// Ensure recorder is in clean state
+					if (recorderState != RecorderState::IDLE)
+					{
+						recorderModule->reset();
+					}
+
 					// Configure recorder with variables from this plot
 					RecorderConfig config;
 					config.bufferSamples = settings.bufferSamples;
 					config.sampleRateHz = settings.sampleRateHz;
+					config.useExternalSampling = true;  // Use ViewerDataHandler for sampling
 
 					for (const auto& [varName, series] : seriesMap)
 					{
@@ -574,9 +581,14 @@ void Gui::drawPlotRecorder(std::shared_ptr<Plot> plot)
 						trigger.varAddress = seriesMap.at(settings.triggerVariable)->var->getAddress();
 					}
 
-					recorderModule->configure(config);
-					recorderModule->setupTrigger(trigger);
-					recorderModule->arm(TriggerMode::SINGLE_SHOT);
+					if (recorderModule->configure(config))
+					{
+						recorderModule->setupTrigger(trigger);
+						recorderModule->arm(TriggerMode::SINGLE_SHOT);
+
+						// Signal ViewerDataHandler to switch to recorder mode
+						viewerDataHandler->setState(DataHandlerBase::State::RUN);  // Ensure running
+					}
 				}
 			}
 			else if (recorderState == RecorderState::ARMED || recorderState == RecorderState::TRIGGERED)

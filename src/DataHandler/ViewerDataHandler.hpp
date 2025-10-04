@@ -58,11 +58,19 @@ class ViewerDataHandler : public DataHandlerBase
    private:
 	using SampleListType = std::vector<std::pair<uint32_t, uint8_t>>;
 
+	enum class SamplingMode
+	{
+		REGULAR,  // Normal plot/table updates
+		RECORDER  // High-speed recorder mode
+	};
+
 	void updateVariables(double timestamp, const std::unordered_map<uint32_t, double>& values);
 	void dataHandler();
 	void recorderHandler();
 	void prepareCSVFile();
 	void createSampleList();
+	void createRecorderSampleList();
+	void sampleForRecorder(double timestamp);
 
    private:
 	static constexpr size_t maxVariablesOnSinglePlot = 100;
@@ -74,9 +82,11 @@ class ViewerDataHandler : public DataHandlerBase
 	std::unordered_map<std::string, double> csvEntry;
 
 	SampleListType sampleList;
+	SampleListType recorderSampleList;
 
 	// Recorder module and thread
 	std::shared_ptr<RecorderModule> recorderModule;
 	std::unique_ptr<std::thread> recorderThreadHandle;
 	std::atomic<bool> recorderThreadRunning{false};
+	std::atomic<SamplingMode> samplingMode{SamplingMode::REGULAR};
 };

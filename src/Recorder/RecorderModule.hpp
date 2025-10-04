@@ -100,6 +100,7 @@ struct RecorderConfig
 	std::vector<uint32_t> addresses;            // Variable addresses to record
 	std::vector<uint8_t> sizes;                 // Size of each variable (1, 2, 4, 8 bytes)
 	bool useHardwareRecording = false;          // Use hardware recording if available
+	bool useExternalSampling = false;           // Use external sampling (fed by ViewerDataHandler)
 };
 
 /**
@@ -290,6 +291,19 @@ class RecorderModule
 	 */
 	void reset();
 
+	/**
+	 * @brief Feed a sample to the recorder (external sampling mode)
+	 * @param timestamp Sample timestamp in seconds
+	 * @param values Map of address -> value
+	 * @return true if triggered, false otherwise
+	 */
+	bool feedSample(double timestamp, const std::unordered_map<uint32_t, double>& values);
+
+	/**
+	 * @brief Check if recorder is in external sampling mode (no internal thread)
+	 */
+	bool isExternalSamplingMode() const { return !recorderThread; }
+
    private:
 	/**
 	 * @brief Main recorder thread function
@@ -339,6 +353,10 @@ class RecorderModule
 
 	// Statistics
 	RecorderStats stats;
+
+	// External sampling mode tracking
+	uint32_t postTriggerSamplesNeeded = 0;
+	uint32_t postTriggerSamplesCollected = 0;
 
 	// Threading
 	std::unique_ptr<std::thread> recorderThread;

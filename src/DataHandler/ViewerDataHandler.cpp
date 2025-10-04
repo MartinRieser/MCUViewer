@@ -2,6 +2,7 @@
 
 #include <algorithm>
 #include <array>
+#include <cstring>
 #include <memory>
 #include <string>
 
@@ -148,24 +149,90 @@ void ViewerDataHandler::dataHandler()
 
 			else if (period > ((1.0 / settings.sampleFrequencyHz) * timer))
 			{
-				std::unordered_map<uint32_t, double> rawValues;
+				// Check if recorder is active and switch mode
+				bool recorderActive = false;
+				uint32_t recorderSampleRate = settings.sampleFrequencyHz;
 
-				/* sample by address */
-				for (auto& [address, size] : sampleList)
+				if (recorderModule)
 				{
-					uint32_t value = 0;
-					if (debugProbe->readMemory(address, (uint8_t*)&value, size))
-						rawValues[address] = value;
-					else
-						setState(State::STOP);
+					RecorderState recState = recorderModule->getState();
+					if (recState == RecorderState::ARMED || recState == RecorderState::TRIGGERED)
+					{
+						recorderActive = true;
+						RecorderConfig recConfig = recorderModule->getConfig();
+						recorderSampleRate = recConfig.sampleRateHz;
+						createRecorderSampleList();  // Update recorder sample list
+					}
 				}
-				double timestamp = std::chrono::duration_cast<std::chrono::duration<double>>(std::chrono::steady_clock::now() - start).count();
-				updateVariables(timestamp, rawValues);
 
-				/* filter sampling frequency */
-				averageSamplingPeriod = samplingPeriodFilter.filter((period - lastT));
-				lastT = period;
-				timer++;
+				// Choose which variables to sample based on mode
+				const auto& activeSampleList = recorderActive ? recorderSampleList : sampleList;
+				uint32_t activeSampleRate = recorderActive ? recorderSampleRate : settings.sampleFrequencyHz;
+
+				// Adjust timing for recorder sample rate
+				if (period > ((1.0 / activeSampleRate) * timer))
+				{
+					std::unordered_map<uint32_t, double> rawValues;
+
+					/* sample by address */
+					for (auto& [address, size] : activeSampleList)
+					{
+						uint8_t buffer[8] = {0};
+						if (debugProbe->readMemory(address, buffer, size))
+						{
+							// For recorder: convert to proper double based on type
+							// For regular plots: keep as raw bits (Variable class does conversion)
+							double value = 0.0;
+
+							if (recorderActive)
+							{
+								// Convert to double based on size (same logic as StlinkRecorderBackend)
+								switch (size)
+								{
+									case 1:
+										value = static_cast<double>(*reinterpret_cast<uint8_t*>(buffer));
+										break;
+									case 2:
+										value = static_cast<double>(*reinterpret_cast<uint16_t*>(buffer));
+										break;
+									case 4:
+										value = static_cast<double>(*reinterpret_cast<float*>(buffer));
+										break;
+									case 8:
+										value = *reinterpret_cast<double*>(buffer);
+										break;
+								}
+							}
+							else
+							{
+								// Regular plots: store raw bits as double (Variable class will interpret)
+								uint32_t rawBits = 0;
+								std::memcpy(&rawBits, buffer, std::min(size, static_cast<uint8_t>(4)));
+								value = static_cast<double>(rawBits);
+							}
+							rawValues[address] = value;
+						}
+						else
+							setState(State::STOP);
+					}
+					double timestamp = std::chrono::duration_cast<std::chrono::duration<double>>(std::chrono::steady_clock::now() - start).count();
+
+					// Feed to recorder if active
+					if (recorderActive && recorderModule)
+					{
+						recorderModule->feedSample(timestamp, rawValues);
+					}
+					// Otherwise update regular plots
+					else
+					{
+						updateVariables(timestamp, rawValues);
+					}
+
+					/* filter sampling frequency */
+					averageSamplingPeriod = samplingPeriodFilter.filter((period - lastT));
+					lastT = period;
+					timer++;
+				}
 			}
 		}
 		else
@@ -195,6 +262,24 @@ void ViewerDataHandler::dataHandler()
 			}
 			stateChangeOrdered = false;
 		}
+	}
+}
+
+void ViewerDataHandler::createRecorderSampleList()
+{
+	recorderSampleList.clear();
+
+	if (!recorderModule)
+		return;
+
+	RecorderState state = recorderModule->getState();
+	if (state != RecorderState::ARMED && state != RecorderState::TRIGGERED)
+		return;
+
+	RecorderConfig config = recorderModule->getConfig();
+	for (size_t i = 0; i < config.addresses.size(); i++)
+	{
+		recorderSampleList.push_back({config.addresses[i], config.sizes[i]});
 	}
 }
 

@@ -196,6 +196,16 @@ bool RecorderModule::arm(TriggerMode mode)
 		return true;
 	}
 
+	// Check if external sampling mode
+	if (config.useExternalSampling)
+	{
+		if (logger)
+			logger->info("Using external sampling mode - no recorder thread");
+
+		state = RecorderState::ARMED;
+		return true;
+	}
+
 	// Software recording mode - start thread
 	if (logger)
 		logger->info("Using software recording mode");
@@ -309,6 +319,101 @@ void RecorderModule::reset()
 
 	if (logger)
 		logger->info("Recorder reset to IDLE");
+}
+
+bool RecorderModule::feedSample(double timestamp, const std::unordered_map<uint32_t, double>& values)
+{
+	// Only accept samples when armed or triggered
+	if (state != RecorderState::ARMED && state != RecorderState::TRIGGERED)
+		return false;
+
+	// Create sample
+	RecorderSample sample;
+	sample.timestamp = timestamp;
+
+	// Extract only the variables we're configured for
+	for (size_t i = 0; i < config.addresses.size(); i++)
+	{
+		uint32_t addr = config.addresses[i];
+		if (values.contains(addr))
+			sample.values[addr] = values.at(addr);
+		else
+			sample.values[addr] = 0.0; // Missing value
+	}
+
+	// Store in circular buffer
+	uint32_t writeIdx = bufferWriteIndex.load();
+	circularBuffer[writeIdx] = sample;
+	bufferWriteIndex = (writeIdx + 1) % config.bufferSamples;
+
+	if (samplesInBuffer < config.bufferSamples)
+		samplesInBuffer++;
+
+	// Check trigger if in ARMED state
+	if (state == RecorderState::ARMED)
+	{
+		bool triggered = false;
+
+		// Need at least 2 samples before checking trigger (to establish baseline)
+		if (samplesInBuffer >= 2)
+		{
+			// Check force trigger
+			if (forceTriggerFlag.load())
+			{
+				triggerSampleIndex = writeIdx;
+				forceTriggerFlag = false;
+				triggered = true;
+			}
+			// Check trigger condition
+			else if (triggerConfig.type != TriggerType::NONE)
+			{
+				if (triggerEvaluator.evaluate(sample.values))
+				{
+					triggerSampleIndex = writeIdx;
+					triggered = true;
+				}
+			}
+		}
+
+		if (triggered)
+		{
+			if (logger)
+				logger->info("Trigger fired in external sampling mode");
+
+			state = RecorderState::TRIGGERED;
+
+			// Calculate post-trigger samples needed
+			uint32_t preTriggerSamples = (config.bufferSamples * triggerConfig.preTriggerPercent) / 100;
+			postTriggerSamplesNeeded = config.bufferSamples - preTriggerSamples;
+			postTriggerSamplesCollected = 0;
+
+			return true; // Signal that trigger fired
+		}
+	}
+	// If in TRIGGERED state, collect post-trigger samples
+	else if (state == RecorderState::TRIGGERED)
+	{
+		postTriggerSamplesCollected++;
+
+		// Check if we've collected enough post-trigger samples
+		if (postTriggerSamplesCollected >= postTriggerSamplesNeeded)
+		{
+			if (logger)
+				logger->info("Post-trigger samples collected ({}/{})", postTriggerSamplesCollected, postTriggerSamplesNeeded);
+
+			// Extract captured data
+			extractSamples();
+
+			state = RecorderState::READY;
+
+			if (logger)
+				logger->info("Recording complete - {} samples captured", capturedData.size());
+
+			return true; // Signal completion
+		}
+	}
+
+	return false;
 }
 
 void RecorderModule::recorderThreadFunc()
