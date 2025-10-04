@@ -102,9 +102,9 @@ bool RecorderModule::setupTrigger(const TriggerConfig& trigger)
 	}
 
 	// Validate trigger configuration
-	if (trigger.preTriggerPercent > 99)
+	if (trigger.preTriggerSamples >= config.bufferSamples)
 	{
-		lastError = "Pre-trigger percentage must be 0-99";
+		lastError = "Pre-trigger samples must be less than buffer size";
 		if (logger)
 			logger->error("RecorderModule::setupTrigger: {}", lastError);
 		return false;
@@ -354,24 +354,24 @@ bool RecorderModule::feedSample(double timestamp, const std::unordered_map<uint3
 	{
 		bool triggered = false;
 
-		// Need at least 2 samples before checking trigger (to establish baseline)
-		if (samplesInBuffer >= 2)
+		// Only check trigger if we have enough pre-trigger samples
+		// This ensures we always get exactly preTriggerSamples before the trigger point
+		bool hasEnoughPreTriggerSamples = (samplesInBuffer.load() >= triggerConfig.preTriggerSamples);
+
+		// Check force trigger (always allowed)
+		if (forceTriggerFlag.load())
 		{
-			// Check force trigger
-			if (forceTriggerFlag.load())
+			triggerSampleIndex = writeIdx;
+			forceTriggerFlag = false;
+			triggered = true;
+		}
+		// Check trigger condition only if we have enough pre-trigger samples
+		else if (triggerConfig.type != TriggerType::NONE && hasEnoughPreTriggerSamples)
+		{
+			if (triggerEvaluator.evaluate(sample.values))
 			{
 				triggerSampleIndex = writeIdx;
-				forceTriggerFlag = false;
 				triggered = true;
-			}
-			// Check trigger condition
-			else if (triggerConfig.type != TriggerType::NONE)
-			{
-				if (triggerEvaluator.evaluate(sample.values))
-				{
-					triggerSampleIndex = writeIdx;
-					triggered = true;
-				}
 			}
 		}
 
@@ -383,8 +383,7 @@ bool RecorderModule::feedSample(double timestamp, const std::unordered_map<uint3
 			state = RecorderState::TRIGGERED;
 
 			// Calculate post-trigger samples needed
-			uint32_t preTriggerSamples = (config.bufferSamples * triggerConfig.preTriggerPercent) / 100;
-			postTriggerSamplesNeeded = config.bufferSamples - preTriggerSamples;
+			postTriggerSamplesNeeded = config.bufferSamples - triggerConfig.preTriggerSamples;
 			postTriggerSamplesCollected = 0;
 
 			return true; // Signal that trigger fired
@@ -442,8 +441,7 @@ void RecorderModule::recorderThreadFunc()
 			state = RecorderState::TRIGGERED;
 
 			// Calculate how many post-trigger samples we need
-			uint32_t preTriggerSamples = (config.bufferSamples * triggerConfig.preTriggerPercent) / 100;
-			uint32_t postTriggerSamples = config.bufferSamples - preTriggerSamples;
+			uint32_t postTriggerSamples = config.bufferSamples - triggerConfig.preTriggerSamples;
 
 			// Continue sampling for post-trigger samples
 			for (uint32_t i = 0; i < postTriggerSamples && !shouldStop; i++)
@@ -526,15 +524,18 @@ bool RecorderModule::sampleAndCheckTrigger()
 	if (samplesInBuffer < config.bufferSamples)
 		samplesInBuffer++;
 
-	// Check trigger
+	// Check trigger - but only if we have enough pre-trigger samples
+	// This ensures we always get exactly preTriggerSamples before the trigger point
+	bool hasEnoughPreTriggerSamples = (samplesInBuffer.load() >= triggerConfig.preTriggerSamples);
+
 	if (forceTriggerFlag.load())
 	{
 		triggerSampleIndex = writeIdx;
 		forceTriggerFlag = false;
-		return true;
+		return true; // Force trigger ignores pre-trigger requirement
 	}
 
-	if (triggerConfig.type != TriggerType::NONE)
+	if (triggerConfig.type != TriggerType::NONE && hasEnoughPreTriggerSamples)
 	{
 		if (triggerEvaluator.evaluate(sample.values))
 		{

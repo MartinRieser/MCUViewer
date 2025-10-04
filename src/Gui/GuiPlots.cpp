@@ -475,27 +475,29 @@ void Gui::drawPlotRecorder(std::shared_ptr<Plot> plot)
 		ImGui::SameLine();
 		ImGui::Text("Pre-Trigger:");
 		ImGui::SameLine();
-		ImGui::SetNextItemWidth(150);
-		int preTrigger = static_cast<int>(settings.preTriggerPercent);
-		if (ImGui::SliderInt("##pretrigger", &preTrigger, 0, 99, "%d%%"))
+		ImGui::SetNextItemWidth(100);
+		int preTrigger = static_cast<int>(settings.preTriggerSamples);
+		if (ImGui::InputInt("##pretrigger", &preTrigger, 10, 100))
 		{
-			settings.preTriggerPercent = static_cast<uint8_t>(preTrigger);
+			settings.preTriggerSamples = std::max(0, std::min(static_cast<int>(settings.bufferSamples), preTrigger));
 			if (recorderModule)
 			{
-				currentTrigger.preTriggerPercent = settings.preTriggerPercent;
+				currentTrigger.preTriggerSamples = settings.preTriggerSamples;
 				recorderModule->setupTrigger(currentTrigger);
 			}
 		}
+		ImGui::SameLine();
+		ImGui::Text("samples");
 
 		if (!canConfigure)
 			ImGui::EndDisabled();
 
 		// Trigger configuration
-		const char* triggerTypes[] = {"None", "Edge", "Level", "Window", "Logic"};
+		const char* triggerTypes[] = {"None", "Edge", "Window", "Logic"};
 		ImGui::Text("Trigger:");
 		ImGui::SameLine();
 		ImGui::SetNextItemWidth(120);
-		ImGui::Combo("##trigtype", &settings.triggerType, triggerTypes, 5);
+		ImGui::Combo("##trigtype", &settings.triggerType, triggerTypes, 4);
 
 		if (settings.triggerType != 0)
 		{
@@ -516,6 +518,17 @@ void Gui::drawPlotRecorder(std::shared_ptr<Plot> plot)
 						ImGui::SetItemDefaultFocus();
 				}
 				ImGui::EndCombo();
+			}
+
+			// Edge trigger specific controls
+			if (settings.triggerType == 1) // EDGE
+			{
+				ImGui::SameLine();
+				ImGui::Text("Edge:");
+				ImGui::SameLine();
+				ImGui::SetNextItemWidth(120);
+				const char* edgeTypes[] = {"Rising", "Falling", "Both"};
+				ImGui::Combo("##edgetype", &settings.triggerCondition, edgeTypes, 3);
 			}
 
 			ImGui::SameLine();
@@ -572,7 +585,8 @@ void Gui::drawPlotRecorder(std::shared_ptr<Plot> plot)
 
 					TriggerConfig trigger;
 					trigger.type = static_cast<TriggerType>(settings.triggerType);
-					trigger.preTriggerPercent = settings.preTriggerPercent;
+					trigger.condition = settings.triggerCondition;
+					trigger.preTriggerSamples = settings.preTriggerSamples;
 					trigger.value1 = settings.triggerValue1;
 
 					// Find trigger variable address

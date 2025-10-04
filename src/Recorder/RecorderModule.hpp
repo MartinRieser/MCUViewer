@@ -31,11 +31,10 @@ enum class RecorderState
  */
 enum class TriggerType
 {
-	NONE,           // No trigger, free-running
-	EDGE,           // Rising or falling edge
-	LEVEL,          // Above or below threshold
-	WINDOW,         // Inside or outside range
-	LOGIC           // Boolean combination of conditions
+	NONE = 0,       // No trigger, free-running
+	EDGE = 1,       // Trigger when crossing threshold (rising/falling/both)
+	WINDOW = 2,     // Trigger when entering/exiting a value range
+	LOGIC = 3       // Boolean combination of conditions
 };
 
 /**
@@ -50,21 +49,16 @@ enum class TriggerMode
 
 /**
  * @brief Edge conditions for edge triggers
+ *
+ * RISING:  Triggers when value crosses threshold going from below to above
+ * FALLING: Triggers when value crosses threshold going from above to below
+ * BOTH:    Triggers on any threshold crossing (rising or falling)
  */
 enum class EdgeCondition
 {
 	RISING = 0,
 	FALLING = 1,
 	BOTH = 2
-};
-
-/**
- * @brief Level conditions for level triggers
- */
-enum class LevelCondition
-{
-	ABOVE = 0,
-	BELOW = 1
 };
 
 /**
@@ -82,12 +76,12 @@ enum class WindowCondition
 struct TriggerConfig
 {
 	TriggerType type = TriggerType::NONE;
-	uint32_t varAddress = 0;        // Address of variable to monitor
-	uint32_t condition = 0;         // Condition code (cast to EdgeCondition/LevelCondition/etc)
-	double value1 = 0.0;            // Primary threshold value
-	double value2 = 0.0;            // Secondary threshold (for window triggers)
-	double hysteresis = 0.0;        // Hysteresis for noise immunity
-	uint8_t preTriggerPercent = 80; // Percentage of buffer before trigger (0-99)
+	uint32_t varAddress = 0;          // Address of variable to monitor
+	uint32_t condition = 0;           // Condition code (cast to EdgeCondition/WindowCondition)
+	double value1 = 0.0;              // Primary threshold value
+	double value2 = 0.0;              // Secondary threshold (for window triggers)
+	double hysteresis = 0.0;          // Hysteresis for noise immunity
+	uint32_t preTriggerSamples = 800; // Absolute number of samples before trigger point
 };
 
 /**

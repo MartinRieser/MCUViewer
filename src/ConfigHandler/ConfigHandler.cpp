@@ -324,7 +324,7 @@ bool ConfigHandler::readConfigFile(std::string& elfPath)
 			getValue("recorder", "trigger_value1", triggerConfig.value1);
 			getValue("recorder", "trigger_value2", triggerConfig.value2);
 			getValue("recorder", "trigger_hysteresis", triggerConfig.hysteresis);
-			getValue("recorder", "pre_trigger_percent", triggerConfig.preTriggerPercent);
+			getValue("recorder", "pre_trigger_samples", triggerConfig.preTriggerSamples);
 
 			hasRecorderConfig = true;
 		}
@@ -380,8 +380,8 @@ bool ConfigHandler::readConfigFile(std::string& elfPath)
 			// which variables the user selects in the GUI. The GUI will need to
 			// call configure() with the selected variables.
 			// We only restore basic settings that can be applied immediately.
-			logger->info("Loaded recorder config: {} samples @ {} Hz, pre-trigger: {}%",
-				recorderConfig.bufferSamples, recorderConfig.sampleRateHz, triggerConfig.preTriggerPercent);
+			logger->info("Loaded recorder config: {} samples @ {} Hz, pre-trigger: {} samples",
+				recorderConfig.bufferSamples, recorderConfig.sampleRateHz, triggerConfig.preTriggerSamples);
 
 			// Store these settings in the recorder for GUI to use
 			// The GUI will combine these with selected variables when configuring
@@ -496,7 +496,7 @@ mINI::INIStructure ConfigHandler::prepareSaveConfigFile(const std::string& elfPa
 		(configIni)["recorder"]["trigger_value1"] = std::to_string(triggerConfig.value1);
 		(configIni)["recorder"]["trigger_value2"] = std::to_string(triggerConfig.value2);
 		(configIni)["recorder"]["trigger_hysteresis"] = std::to_string(triggerConfig.hysteresis);
-		(configIni)["recorder"]["pre_trigger_percent"] = std::to_string(triggerConfig.preTriggerPercent);
+		(configIni)["recorder"]["pre_trigger_samples"] = std::to_string(triggerConfig.preTriggerSamples);
 	}
 
 	uint32_t varId = 0;

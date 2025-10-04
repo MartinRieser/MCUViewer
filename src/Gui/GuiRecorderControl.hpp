@@ -68,16 +68,18 @@ class RecorderControlWindow
 		ImGui::SameLine();
 		ImGui::Text("Hz");
 
-		// Pre-trigger percentage
+		// Pre-trigger samples (absolute count)
 		ImGui::Text("Pre-Trigger:");
 		ImGui::SameLine();
-		ImGui::SetNextItemWidth(200);
-		int preTrigger = static_cast<int>(trigger.preTriggerPercent);
-		if (ImGui::SliderInt("##pretrigger", &preTrigger, 0, 99, "%d%%"))
+		ImGui::SetNextItemWidth(150);
+		int preTrigger = static_cast<int>(trigger.preTriggerSamples);
+		if (ImGui::InputInt("##pretrigger", &preTrigger, 10, 100))
 		{
-			trigger.preTriggerPercent = static_cast<uint8_t>(preTrigger);
+			trigger.preTriggerSamples = std::max(0, std::min(static_cast<int>(config.bufferSamples), preTrigger));
 			recorder->setupTrigger(trigger);
 		}
+		ImGui::SameLine();
+		ImGui::Text("samples");
 
 		ImGui::Separator();
 
@@ -121,9 +123,9 @@ class RecorderControlWindow
 		// Trigger configuration
 		ImGui::Text("Trigger Configuration");
 
-		const char* triggerTypes[] = {"None (Free-Running)", "Edge", "Level", "Window", "Logic"};
+		const char* triggerTypes[] = {"None (Free-Running)", "Edge", "Window", "Logic"};
 		int triggerType = static_cast<int>(trigger.type);
-		if (ImGui::Combo("Trigger Type", &triggerType, triggerTypes, 5))
+		if (ImGui::Combo("Trigger Type", &triggerType, triggerTypes, 4))
 		{
 			trigger.type = static_cast<TriggerType>(triggerType);
 			recorder->setupTrigger(trigger);
@@ -150,27 +152,11 @@ class RecorderControlWindow
 			// Trigger-type-specific parameters
 			if (trigger.type == TriggerType::EDGE)
 			{
-				const char* edgeTypes[] = {"Rising", "Falling", "Both"};
+				const char* edgeTypes[] = {"Rising Edge", "Falling Edge", "Both Edges"};
 				int edgeType = static_cast<int>(trigger.condition);
 				if (ImGui::Combo("Edge Type", &edgeType, edgeTypes, 3))
 				{
 					trigger.condition = edgeType;
-					recorder->setupTrigger(trigger);
-				}
-
-				ImGui::Text("Threshold:");
-				ImGui::SameLine();
-				ImGui::SetNextItemWidth(150);
-				if (ImGui::InputDouble("##threshold", &trigger.value1))
-					recorder->setupTrigger(trigger);
-			}
-			else if (trigger.type == TriggerType::LEVEL)
-			{
-				const char* levelTypes[] = {"Above", "Below"};
-				int levelType = static_cast<int>(trigger.condition);
-				if (ImGui::Combo("Condition", &levelType, levelTypes, 2))
-				{
-					trigger.condition = levelType;
 					recorder->setupTrigger(trigger);
 				}
 

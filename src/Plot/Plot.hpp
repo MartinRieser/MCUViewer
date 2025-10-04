@@ -153,7 +153,7 @@ class Plot
 	{
 		uint32_t bufferSamples = 1000;
 		uint32_t sampleRateHz = 100;
-		uint8_t preTriggerPercent = 80;
+		uint32_t preTriggerSamples = 800;
 
 		// Trigger settings
 		int triggerType = 0; // 0=None, 1=Edge, 2=Level, 3=Window, 4=Logic

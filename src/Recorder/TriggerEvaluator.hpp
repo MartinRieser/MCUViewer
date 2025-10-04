@@ -68,9 +68,6 @@ class TriggerEvaluator
 			case TriggerType::EDGE:
 				return evaluateEdge(value);
 
-			case TriggerType::LEVEL:
-				return evaluateLevel(value);
-
 			case TriggerType::WINDOW:
 				return evaluateWindow(value);
 
@@ -149,63 +146,6 @@ class TriggerEvaluator
 		lastValue_ = value;
 
 		return triggered;
-	}
-
-	/**
-	 * @brief Evaluate level trigger
-	 * @param value Current value
-	 * @return true if level condition met
-	 */
-	bool evaluateLevel(double value)
-	{
-		LevelCondition condition = static_cast<LevelCondition>(config_.condition);
-		double threshold = config_.value1;
-		double hyst = config_.hysteresis;
-
-		// Apply hysteresis
-		if (hyst > 0.0)
-		{
-			if (condition == LevelCondition::ABOVE)
-			{
-				// Trigger when crossing threshold + hysteresis/2
-				double triggerThreshold = threshold + hyst / 2.0;
-				bool triggered = (value > triggerThreshold);
-
-				// Once triggered, maintain until dropping below threshold - hysteresis/2
-				if (triggered || lastState_)
-				{
-					double releaseThreshold = threshold - hyst / 2.0;
-					lastState_ = (value > releaseThreshold);
-					return triggered && !lastState_; // Return true only on initial trigger
-				}
-
-				return false;
-			}
-			else // LevelCondition::BELOW
-			{
-				// Trigger when crossing threshold - hysteresis/2
-				double triggerThreshold = threshold - hyst / 2.0;
-				bool triggered = (value < triggerThreshold);
-
-				// Once triggered, maintain until rising above threshold + hysteresis/2
-				if (triggered || lastState_)
-				{
-					double releaseThreshold = threshold + hyst / 2.0;
-					lastState_ = (value < releaseThreshold);
-					return triggered && !lastState_; // Return true only on initial trigger
-				}
-
-				return false;
-			}
-		}
-		else
-		{
-			// No hysteresis - simple comparison
-			if (condition == LevelCondition::ABOVE)
-				return value > threshold;
-			else
-				return value < threshold;
-		}
 	}
 
 	/**

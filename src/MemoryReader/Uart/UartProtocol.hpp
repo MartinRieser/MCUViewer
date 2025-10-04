@@ -223,7 +223,7 @@ struct SetupRecorderPayload
 {
     uint32_t bufferSize;           // Buffer size in samples
     uint16_t sampleRateHz;         // Sampling rate in Hz
-    uint8_t preTriggerPercent;     // Pre-trigger % (0-100)
+    uint32_t preTriggerSamples;    // Pre-trigger samples (absolute count)
     uint8_t numVars;               // Number of variables to record
 
     struct Variable
