@@ -21,6 +21,8 @@ bool StlinkDebugProbe::startAcqusition(const DebugProbeSettings& probeSettings, 
 
 	if (sl != nullptr)
 	{
+		detectProbeCapabilities();
+
 		if (stlink_enter_swd_mode(sl) != 0 || stlink_target_connect(sl, CONNECT_HOT_PLUG) != 0)
 		{
 			isRunning = false;
@@ -138,4 +140,45 @@ std::vector<std::string> StlinkDebugProbe::getConnectedDevices()
 	stlink_probe_usb_free(&stdevs, size);
 
 	return deviceIDs;
+}
+
+void StlinkDebugProbe::detectProbeCapabilities()
+{
+	if (sl == nullptr)
+		return;
+
+	probeInfo.stlinkVersion = sl->version.stlink_v;
+	probeInfo.jtagVersion = sl->version.jtag_v;
+	probeInfo.maxTraceFreqHz = sl->max_trace_freq;
+
+	// Determine max SWD speed based on STLink version
+	// STLink V3 supports up to 24 MHz, V2 supports up to 4 MHz
+	if (probeInfo.stlinkVersion == 3)
+	{
+		probeInfo.maxSwdSpeedKHz = 24000;  // 24 MHz
+		probeInfo.versionString = "STLink V3";
+	}
+	else if (probeInfo.stlinkVersion == 2)
+	{
+		probeInfo.maxSwdSpeedKHz = 4000;  // 4 MHz
+		probeInfo.versionString = "STLink V2";
+	}
+	else
+	{
+		// V1 or unknown
+		probeInfo.maxSwdSpeedKHz = 1800;  // 1.8 MHz (conservative for V1)
+		probeInfo.versionString = "STLink V" + std::to_string(probeInfo.stlinkVersion);
+	}
+
+	logger->info("Detected {} - JTAG v{}, Max SWD: {} kHz, Max Trace: {} Hz",
+				 probeInfo.versionString,
+				 probeInfo.jtagVersion,
+				 probeInfo.maxSwdSpeedKHz,
+				 probeInfo.maxTraceFreqHz);
+}
+
+StlinkDebugProbe::ProbeInfo StlinkDebugProbe::getProbeInfo() const
+{
+	std::lock_guard<std::mutex> lock(mtx);
+	return probeInfo;
 }

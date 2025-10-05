@@ -1,4 +1,5 @@
 #include "Gui.hpp"
+#include "StlinkDebugProbe.hpp"
 
 static constexpr size_t alignment = 30;
 
@@ -130,11 +131,48 @@ void Gui::drawDebugProbes()
 		shouldListDevices = false;
 	}
 
+	// Display probe version info if available
+	if (probeSettings.debugProbe == 0 && stlinkProbe)  // STLink selected
+	{
+		auto stlink = std::dynamic_pointer_cast<StlinkDebugProbe>(stlinkProbe);
+		if (stlink)
+		{
+			auto probeInfo = stlink->getProbeInfo();
+			if (probeInfo.stlinkVersion > 0)
+			{
+				GuiHelper::drawTextAlignedToSize("Detected probe:", alignment);
+				ImGui::SameLine();
+				ImGui::TextColored(ImVec4(0.0f, 1.0f, 0.0f, 1.0f), "%s (JTAG v%u)", probeInfo.versionString.c_str(), probeInfo.jtagVersion);
+				ImGui::SameLine();
+				ImGui::HelpMarker("Automatically detected STLink hardware version and capabilities.");
+			}
+		}
+	}
+
 	GuiHelper::drawTextAlignedToSize("SWD speed [kHz]:", alignment);
 	ImGui::SameLine();
 
+	uint32_t maxSpeedKHz = 24000;  // Default max
+	if (probeSettings.debugProbe == 0 && stlinkProbe)  // STLink selected
+	{
+		auto stlink = std::dynamic_pointer_cast<StlinkDebugProbe>(stlinkProbe);
+		if (stlink)
+		{
+			auto probeInfo = stlink->getProbeInfo();
+			if (probeInfo.stlinkVersion > 0)
+				maxSpeedKHz = probeInfo.maxSwdSpeedKHz;
+		}
+	}
+
 	if (ImGui::InputScalar("##speed", ImGuiDataType_U32, &probeSettings.speedkHz, NULL, NULL, "%u"))
 		modified = true;
+
+	// Show warning if speed exceeds probe capabilities
+	if (probeSettings.debugProbe == 0 && probeSettings.speedkHz > maxSpeedKHz)
+	{
+		ImGui::SameLine();
+		ImGui::TextColored(ImVec4(1.0f, 0.5f, 0.0f, 1.0f), "! Speed exceeds probe max (%u kHz)", maxSpeedKHz);
+	}
 
 	if (probeSettings.debugProbe == 1)
 	{

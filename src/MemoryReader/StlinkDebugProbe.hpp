@@ -20,6 +20,15 @@ extern "C" {
 class StlinkDebugProbe : public IDebugProbe
 {
    public:
+	struct ProbeInfo
+	{
+		uint32_t stlinkVersion = 0;  // 2 or 3
+		uint32_t jtagVersion = 0;
+		uint32_t maxSwdSpeedKHz = 4000;  // Default to V2 max (4 MHz)
+		uint32_t maxTraceFreqHz = 2000000;  // Default to V2 max (2 MHz)
+		std::string versionString = "";
+	};
+
 	StlinkDebugProbe(spdlog::logger* logger);
 	bool startAcqusition(const DebugProbeSettings& probeSettings, std::vector<std::pair<uint32_t, uint8_t>>& addressSizeVector, uint32_t samplingFreqency) override;
 	bool stopAcqusition() override;
@@ -33,9 +42,14 @@ class StlinkDebugProbe : public IDebugProbe
 	std::string getLastErrorMsg() const override;
 	std::vector<std::string> getConnectedDevices() override;
 
+	ProbeInfo getProbeInfo() const;
+
    private:
+	void detectProbeCapabilities();
+
 	stlink_t* sl = nullptr;
 	spdlog::logger* logger;
+	ProbeInfo probeInfo;
 };
 
 #endif
