@@ -118,6 +118,7 @@ struct RecorderStats
 	double firstTimestamp = 0.0;
 	double lastTimestamp = 0.0;
 	uint32_t triggerIndex = 0;
+	double actualSampleRateHz = 0.0;  // Measured actual sample rate
 };
 
 /**

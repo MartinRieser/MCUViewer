@@ -561,6 +561,15 @@ void RecorderModule::extractSamples()
 	// Only extract the configured buffer size, not all samples that may have accumulated
 	uint32_t samplesToExtract = std::min(totalSamples, config.bufferSamples);
 
+	if (logger)
+	{
+		logger->info("=== RECORDER EXTRACT DEBUG ===");
+		logger->info("Config: bufferSamples={}, sampleRateHz={}", config.bufferSamples, config.sampleRateHz);
+		logger->info("Trigger: preTriggerSamples={}", triggerConfig.preTriggerSamples);
+		logger->info("Buffer: samplesInBuffer={}, samplesToExtract={}", totalSamples, samplesToExtract);
+		logger->info("Trigger index: {}", triggerSampleIndex);
+	}
+
 	// Calculate where to start reading from circular buffer
 	uint32_t currentWriteIdx = bufferWriteIndex.load();
 	uint32_t startIdx;
@@ -617,11 +626,36 @@ void RecorderModule::extractSamples()
 
 		if (stats.triggerIndex < capturedData.size())
 			stats.triggerTimestamp = capturedData[stats.triggerIndex].timestamp;
+
+		// Calculate actual achieved sample rate
+		double duration = stats.lastTimestamp - stats.firstTimestamp;
+		if (duration > 0.0 && totalSamples > 1)
+		{
+			stats.actualSampleRateHz = (totalSamples - 1) / duration;
+		}
+
+		if (logger)
+		{
+			logger->info("Timestamps: first={:.6f}, last={:.6f}, trigger={:.6f}",
+						 stats.firstTimestamp, stats.lastTimestamp, stats.triggerTimestamp);
+			logger->info("Duration: {:.6f}s ({:.3f}ms)",
+						 duration, duration * 1000.0);
+			logger->info("Actual sample rate: {:.1f} Hz (configured: {} Hz)",
+						 stats.actualSampleRateHz, config.sampleRateHz);
+
+			if (stats.actualSampleRateHz < config.sampleRateHz * 0.8)
+			{
+				logger->warn("Actual sample rate ({:.1f} Hz) is significantly lower than configured ({} Hz)",
+							 stats.actualSampleRateHz, config.sampleRateHz);
+				logger->warn("STLink USB polling is limited to ~3-4 kHz. Consider lowering sample rate or using hardware recording.");
+			}
+		}
 	}
 
 	if (logger)
 	{
 		logger->info("Extracted {} samples: pre-trigger={}, post-trigger={}",
 					 stats.totalSamples, stats.preTriggerSamples, stats.postTriggerSamples);
+		logger->info("=== END DEBUG ===");
 	}
 }

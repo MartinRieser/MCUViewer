@@ -280,12 +280,26 @@ class RecorderControlWindow
 			ImGui::Text("Recording Statistics:");
 
 			RecorderStats stats = recorder->getStats();
+			RecorderConfig cfg = recorder->getConfig();
+
 			ImGui::Text("Total Samples:       %u", stats.totalSamples);
 			ImGui::Text("Pre-Trigger Samples: %u", stats.preTriggerSamples);
 			ImGui::Text("Post-Trigger Samples:%u", stats.postTriggerSamples);
 			ImGui::Text("Trigger Index:       %u", stats.triggerIndex);
 			ImGui::Text("Trigger Time:        %.3f s", stats.triggerTimestamp);
 			ImGui::Text("Duration:            %.3f s", stats.lastTimestamp - stats.firstTimestamp);
+
+			// Show actual vs configured sample rate
+			ImGui::Text("Sample Rate:         %.1f Hz (cfg: %u Hz)", stats.actualSampleRateHz, cfg.sampleRateHz);
+
+			// Warn if actual rate is significantly lower than configured
+			if (stats.actualSampleRateHz > 0 && stats.actualSampleRateHz < cfg.sampleRateHz * 0.8)
+			{
+				ImGui::TextColored(ImVec4(1.0f, 0.5f, 0.0f, 1.0f),
+					"Warning: Actual rate is %.0f%% of configured!",
+					(stats.actualSampleRateHz / cfg.sampleRateHz) * 100.0);
+				ImGui::TextWrapped("STLink USB is limited to ~3-4 kHz.");
+			}
 		}
 	}
 
