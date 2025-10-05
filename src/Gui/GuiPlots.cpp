@@ -472,6 +472,14 @@ void Gui::drawPlotRecorder(std::shared_ptr<Plot> plot)
 			}
 		}
 
+		// Warning for high sample rates (software polling limitation)
+		// Note: Limit applies mainly to STLink. JLink/UART may have different limits.
+		if (settings.sampleRateHz > 4000)
+		{
+			ImGui::SameLine();
+			ImGui::TextColored(ImVec4(1.0f, 0.5f, 0.0f, 1.0f), "⚠ SW polling ~3-4 kHz max");
+		}
+
 		ImGui::SameLine();
 		ImGui::Text("Pre-Trigger:");
 		ImGui::SameLine();

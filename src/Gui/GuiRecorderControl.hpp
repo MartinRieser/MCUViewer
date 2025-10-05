@@ -68,6 +68,17 @@ class RecorderControlWindow
 		ImGui::SameLine();
 		ImGui::Text("Hz");
 
+		// Warning for high sample rates (only for software polling probes)
+		// Note: This warning applies to STLink (0). JLink (1) and UART (2) have different limits.
+		// TODO: Get actual probe type from viewerDataHandler to make this probe-specific
+		if (config.sampleRateHz > 4000 && !config.useHardwareRecording)
+		{
+			ImGui::TextColored(ImVec4(1.0f, 0.5f, 0.0f, 1.0f),
+				"Warning: Software polling limited to ~3-4 kHz (STLink)");
+			ImGui::TextColored(ImVec4(1.0f, 0.5f, 0.0f, 1.0f),
+				"Use 1-3 kHz or enable hardware recording if supported.");
+		}
+
 		// Pre-trigger samples (absolute count)
 		ImGui::Text("Pre-Trigger:");
 		ImGui::SameLine();
