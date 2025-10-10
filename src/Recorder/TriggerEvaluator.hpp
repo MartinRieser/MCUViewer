@@ -107,42 +107,80 @@ class TriggerEvaluator
 		double threshold = config_.value1;
 		double hyst = config_.hysteresis;
 
-		// Apply hysteresis to threshold
-		double upperThreshold = threshold + hyst / 2.0;
-		double lowerThreshold = threshold - hyst / 2.0;
-
-		// Determine current state with hysteresis
-		bool currentState;
-		if (value >= upperThreshold)
-			currentState = true;
-		else if (value <= lowerThreshold)
-			currentState = false;
-		else
-			currentState = lastState_; // Stay in current state (hysteresis)
-
-		// Detect edge
 		bool triggered = false;
 
+		// Check for actual threshold crossings
 		switch (condition)
 		{
 			case EdgeCondition::RISING:
-				if (!lastState_ && currentState)
-					triggered = true;
+				// Trigger only when crossing threshold upward
+				if (lastValue_ < threshold && value >= threshold)
+				{
+					// Apply hysteresis to prevent re-triggering
+					if (!lastState_ || value >= threshold + hyst)
+					{
+						triggered = true;
+						lastState_ = true;
+					}
+				}
+				else if (value <= threshold - hyst)
+				{
+					// Reset state when below hysteresis band
+					lastState_ = false;
+				}
 				break;
 
 			case EdgeCondition::FALLING:
-				if (lastState_ && !currentState)
-					triggered = true;
+				// Trigger only when crossing threshold downward
+				if (lastValue_ > threshold && value <= threshold)
+				{
+					// Apply hysteresis to prevent re-triggering
+					if (lastState_ || value <= threshold - hyst)
+					{
+						triggered = true;
+						lastState_ = true;
+					}
+				}
+				else if (value >= threshold + hyst)
+				{
+					// Reset state when above hysteresis band
+					lastState_ = false;
+				}
 				break;
 
 			case EdgeCondition::BOTH:
-				if (lastState_ != currentState)
-					triggered = true;
+				// Trigger on any threshold crossing
+				if (lastValue_ < threshold && value >= threshold)
+				{
+					// Rising edge crossing
+					if (!lastState_ || value >= threshold + hyst)
+					{
+						triggered = true;
+						lastState_ = true;
+					}
+				}
+				else if (lastValue_ > threshold && value <= threshold)
+				{
+					// Falling edge crossing
+					if (!lastState_ || value <= threshold - hyst)
+					{
+						triggered = true;
+						lastState_ = true;
+					}
+				}
+				else if (value > threshold - hyst && value < threshold + hyst)
+				{
+					// Inside hysteresis band - don't reset
+				}
+				else
+				{
+					// Outside hysteresis band - reset
+					lastState_ = false;
+				}
 				break;
 		}
 
-		// Update state
-		lastState_ = currentState;
+		// Update last value for next comparison
 		lastValue_ = value;
 
 		return triggered;
