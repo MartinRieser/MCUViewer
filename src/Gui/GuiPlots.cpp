@@ -651,9 +651,15 @@ void Gui::drawRecorderControls(std::shared_ptr<Plot> plot)
 
 void Gui::drawPlotRecorder(std::shared_ptr<Plot> plot)
 {
-	auto& settings = plot->getRecorderSettings();
 	auto& seriesMap = plot->getSeriesMap();
 	auto recorderModule = viewerDataHandler->getRecorderModule();
+
+	// Get current state from recorder module
+	RecorderState recorderState = RecorderState::IDLE;
+	if (recorderModule)
+	{
+		recorderState = recorderModule->getState();
+	}
 
 	// Draw plot area
 	if (ImPlot::BeginPlot(plot->getName().c_str(), ImVec2(-1, -1), ImPlotFlags_NoChild))

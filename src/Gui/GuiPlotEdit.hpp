@@ -6,7 +6,10 @@
 #include "Plot.hpp"
 #include "PlotGroupHandler.hpp"
 #include "Popup.hpp"
+#include "PlotHandler.hpp"
+#include "VariableHandler.hpp"
 #include "imgui.h"
+
 
 class PlotEditWindow
 {
