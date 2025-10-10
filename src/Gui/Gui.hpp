@@ -133,6 +133,7 @@ class Gui
 	void drawPlotTable(std::shared_ptr<Plot> plot);
 	void drawPlotXY(std::shared_ptr<Plot> plot);
 	void drawPlotRecorder(std::shared_ptr<Plot> plot);
+	void drawRecorderControls(std::shared_ptr<Plot> plot);
 	void handleMarkers(uint32_t id, Plot::Marker& marker, ImPlotRect plotLimits, std::function<void()> activeCallback);
 	void handleDragRect(uint32_t id, Plot::DragRect& dragRect, ImPlotRect plotLimits);
 	void dragAndDropPlot(std::shared_ptr<Plot> plot);

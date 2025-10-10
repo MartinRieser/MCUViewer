@@ -380,7 +380,7 @@ void Gui::handleDragRect(uint32_t id, Plot::DragRect& dragRect, ImPlotRect plotL
 	}
 }
 
-void Gui::drawPlotRecorder(std::shared_ptr<Plot> plot)
+void Gui::drawRecorderControls(std::shared_ptr<Plot> plot)
 {
 	auto& settings = plot->getRecorderSettings();
 	auto& seriesMap = plot->getSeriesMap();
@@ -398,266 +398,262 @@ void Gui::drawPlotRecorder(std::shared_ptr<Plot> plot)
 		currentTrigger = recorderModule->getTriggerConfig();
 	}
 
-	// Draw recorder controls in a child window above the plot
-	ImGui::BeginChild("RecorderControls", ImVec2(0, 160 * GuiHelper::contentScale), true);
+	// Status indicator
+	ImGui::Text("Recorder Status:");
+	ImGui::Spacing();
+
+	if (!recorderModule)
 	{
-		// Status indicator
-		ImGui::Text("Status:");
-		ImGui::SameLine();
-
-		if (!recorderModule)
+		ImGui::TextColored(ImVec4(1.0f, 0.0f, 0.0f, 1.0f), "NO RECORDER MODULE");
+	}
+	else
+	{
+		switch (recorderState)
 		{
-			ImGui::TextColored(ImVec4(1.0f, 0.0f, 0.0f, 1.0f), "NO RECORDER MODULE");
-		}
-		else
-		{
-			switch (recorderState)
-			{
-				case RecorderState::IDLE:
-					ImGui::TextColored(ImVec4(0.7f, 0.7f, 0.7f, 1.0f), "IDLE");
-					break;
-				case RecorderState::CONFIGURED:
-					ImGui::TextColored(ImVec4(0.5f, 0.5f, 1.0f, 1.0f), "CONFIGURED");
-					break;
-				case RecorderState::ARMED:
-					ImGui::TextColored(ImVec4(1.0f, 1.0f, 0.0f, 1.0f), "ARMED - Waiting for Trigger");
-					break;
-				case RecorderState::TRIGGERED:
-					ImGui::TextColored(ImVec4(1.0f, 0.5f, 0.0f, 1.0f), "TRIGGERED - Recording");
-					break;
-				case RecorderState::READY:
-					ImGui::TextColored(ImVec4(0.0f, 1.0f, 0.0f, 1.0f), "READY - Data Available");
-					break;
-				case RecorderState::RECORDER_ERROR:
-					ImGui::TextColored(ImVec4(1.0f, 0.0f, 0.0f, 1.0f), "ERROR");
-					break;
-			}
-		}
-
-		ImGui::SameLine();
-		ImGui::Dummy(ImVec2(20, 0));
-		ImGui::SameLine();
-
-		// Configuration controls
-		bool canConfigure = (recorderState == RecorderState::IDLE || recorderState == RecorderState::CONFIGURED);
-		if (!canConfigure)
-			ImGui::BeginDisabled();
-
-		ImGui::Text("Samples:");
-		ImGui::SameLine();
-		ImGui::SetNextItemWidth(100);
-		int bufferSamples = static_cast<int>(settings.bufferSamples);
-		if (ImGui::InputInt("##samples", &bufferSamples, 100, 1000))
-		{
-			settings.bufferSamples = std::max(100, std::min(100000, bufferSamples));
-			if (recorderModule)
-			{
-				currentConfig.bufferSamples = settings.bufferSamples;
-				recorderModule->configure(currentConfig);
-			}
-		}
-
-		ImGui::SameLine();
-		ImGui::Text("Rate (Hz):");
-		ImGui::SameLine();
-		ImGui::SetNextItemWidth(100);
-		int sampleRate = static_cast<int>(settings.sampleRateHz);
-		if (ImGui::InputInt("##rate", &sampleRate, 10, 100))
-		{
-			settings.sampleRateHz = std::max(1, std::min(10000, sampleRate));
-			if (recorderModule)
-			{
-				currentConfig.sampleRateHz = settings.sampleRateHz;
-				recorderModule->configure(currentConfig);
-			}
-		}
-
-		// Warning for high sample rates (software polling limitation)
-		// Note: Limit applies mainly to STLink. JLink/UART may have different limits.
-		if (settings.sampleRateHz > 4000)
-		{
-			ImGui::SameLine();
-			ImGui::TextColored(ImVec4(1.0f, 0.5f, 0.0f, 1.0f), "⚠ SW polling ~3-4 kHz max");
-		}
-
-		ImGui::SameLine();
-		ImGui::Text("Pre-Trigger:");
-		ImGui::SameLine();
-		ImGui::SetNextItemWidth(100);
-		int preTrigger = static_cast<int>(settings.preTriggerSamples);
-		if (ImGui::InputInt("##pretrigger", &preTrigger, 10, 100))
-		{
-			settings.preTriggerSamples = std::max(0, std::min(static_cast<int>(settings.bufferSamples), preTrigger));
-			if (recorderModule)
-			{
-				currentTrigger.preTriggerSamples = settings.preTriggerSamples;
-				recorderModule->setupTrigger(currentTrigger);
-			}
-		}
-		ImGui::SameLine();
-		ImGui::Text("samples");
-
-		if (!canConfigure)
-			ImGui::EndDisabled();
-
-		// Trigger configuration
-		const char* triggerTypes[] = {"None", "Edge", "Window", "Logic"};
-		ImGui::Text("Trigger:");
-		ImGui::SameLine();
-		ImGui::SetNextItemWidth(120);
-		ImGui::Combo("##trigtype", &settings.triggerType, triggerTypes, 4);
-
-		if (settings.triggerType != 0)
-		{
-			ImGui::SameLine();
-			ImGui::Text("Variable:");
-			ImGui::SameLine();
-			ImGui::SetNextItemWidth(150);
-
-			// Create dropdown with variables from seriesMap
-			if (ImGui::BeginCombo("##trigvar", settings.triggerVariable.c_str()))
-			{
-				for (const auto& [varName, series] : seriesMap)
-				{
-					bool isSelected = (settings.triggerVariable == varName);
-					if (ImGui::Selectable(varName.c_str(), isSelected))
-						settings.triggerVariable = varName;
-					if (isSelected)
-						ImGui::SetItemDefaultFocus();
-				}
-				ImGui::EndCombo();
-			}
-
-			// Edge trigger specific controls
-			if (settings.triggerType == 1) // EDGE
-			{
-				ImGui::SameLine();
-				ImGui::Text("Edge:");
-				ImGui::SameLine();
-				ImGui::SetNextItemWidth(120);
-				const char* edgeTypes[] = {"Rising", "Falling", "Both"};
-				ImGui::Combo("##edgetype", &settings.triggerCondition, edgeTypes, 3);
-			}
-
-			ImGui::SameLine();
-			ImGui::Text("Threshold:");
-			ImGui::SameLine();
-			ImGui::SetNextItemWidth(100);
-			ImGui::InputDouble("##threshold", &settings.triggerValue1);
-		}
-
-		// Show added variables with visibility toggles
-		if (!seriesMap.empty())
-		{
-			ImGui::Separator();
-			ImGui::Text("Variables:");
-			ImGui::SameLine();
-			for (auto& [varName, series] : seriesMap)
-			{
-				Variable::Color color = series->var->getColor();
-				ImVec4 col = {color.r, color.g, color.b, color.a};
-				ImGui::ColorButton(("##color_" + varName).c_str(), col, ImGuiColorEditFlags_NoInputs | ImGuiColorEditFlags_NoTooltip, ImVec2(10 * GuiHelper::contentScale, 10 * GuiHelper::contentScale));
-				ImGui::SameLine();
-				ImGui::Checkbox(varName.c_str(), &series->visible);
-				ImGui::SameLine();
-			}
-			ImGui::NewLine();
-		}
-
-		// Control buttons
-		ImGui::Separator();
-		if (recorderModule)
-		{
-			// Configure recorder with selected variables before arming
-			if (recorderState == RecorderState::IDLE || recorderState == RecorderState::CONFIGURED || recorderState == RecorderState::READY)
-			{
-				if (ImGui::Button("Arm Trigger", ImVec2(120, 25)))
-				{
-					// Ensure recorder is in clean state
-					if (recorderState != RecorderState::IDLE)
-					{
-						recorderModule->reset();
-					}
-
-					// Configure recorder with variables from this plot
-					RecorderConfig config;
-					config.bufferSamples = settings.bufferSamples;
-					config.sampleRateHz = settings.sampleRateHz;
-					config.useExternalSampling = true;  // Use ViewerDataHandler for sampling
-
-					for (const auto& [varName, series] : seriesMap)
-					{
-						config.addresses.push_back(series->var->getAddress());
-						config.sizes.push_back(series->var->getSize());
-					}
-
-					TriggerConfig trigger;
-					trigger.type = static_cast<TriggerType>(settings.triggerType);
-					trigger.condition = settings.triggerCondition;
-					trigger.preTriggerSamples = settings.preTriggerSamples;
-					trigger.value1 = settings.triggerValue1;
-
-					// Find trigger variable address
-					if (!settings.triggerVariable.empty() && seriesMap.count(settings.triggerVariable))
-					{
-						trigger.varAddress = seriesMap.at(settings.triggerVariable)->var->getAddress();
-					}
-
-					if (recorderModule->configure(config))
-					{
-						recorderModule->setupTrigger(trigger);
-						recorderModule->arm(TriggerMode::SINGLE_SHOT);
-
-						// Signal ViewerDataHandler to switch to recorder mode
-						viewerDataHandler->setState(DataHandlerBase::State::RUN);  // Ensure running
-					}
-				}
-			}
-			else if (recorderState == RecorderState::ARMED || recorderState == RecorderState::TRIGGERED)
-			{
-				if (ImGui::Button("Disarm", ImVec2(120, 25)))
-				{
-					recorderModule->disarm();
-				}
-				ImGui::SameLine();
-				if (ImGui::Button("Force Trigger", ImVec2(120, 25)))
-				{
-					recorderModule->forceTrigger();
-				}
-			}
-
-			if (recorderState == RecorderState::READY)
-			{
-				ImGui::SameLine();
-				if (ImGui::Button("Reset", ImVec2(120, 25)))
-				{
-					recorderModule->reset();
-				}
-			}
-
-			// Allow resetting from error state
-			if (recorderState == RecorderState::RECORDER_ERROR)
-			{
-				if (ImGui::Button("Clear Error", ImVec2(120, 25)))
-				{
-					recorderModule->reset();
-				}
-				if (ImGui::IsItemHovered())
-				{
-					ImGui::BeginTooltip();
-					ImGui::Text("Common causes:");
-					ImGui::BulletText("Debug probe disconnected");
-					ImGui::BulletText("Target not powered");
-					ImGui::BulletText("Invalid variable addresses");
-					ImGui::BulletText("Target halted or not running");
-					ImGui::EndTooltip();
-				}
-				ImGui::SameLine();
-				ImGui::TextColored(ImVec4(1.0f, 0.5f, 0.0f, 1.0f), "Click 'Clear Error' to retry");
-			}
+			case RecorderState::IDLE:
+				ImGui::TextColored(ImVec4(0.7f, 0.7f, 0.7f, 1.0f), "IDLE");
+				break;
+			case RecorderState::CONFIGURED:
+				ImGui::TextColored(ImVec4(0.5f, 0.5f, 1.0f, 1.0f), "CONFIGURED");
+				break;
+			case RecorderState::ARMED:
+				ImGui::TextColored(ImVec4(1.0f, 1.0f, 0.0f, 1.0f), "ARMED - Waiting for Trigger");
+				break;
+			case RecorderState::TRIGGERED:
+				ImGui::TextColored(ImVec4(1.0f, 0.5f, 0.0f, 1.0f), "TRIGGERED - Recording");
+				break;
+			case RecorderState::READY:
+				ImGui::TextColored(ImVec4(0.0f, 1.0f, 0.0f, 1.0f), "READY - Data Available");
+				break;
+			case RecorderState::RECORDER_ERROR:
+				ImGui::TextColored(ImVec4(1.0f, 0.0f, 0.0f, 1.0f), "ERROR");
+				break;
 		}
 	}
-	ImGui::EndChild();
+
+	ImGui::Separator();
+
+	// Configuration controls
+	bool canConfigure = (recorderState == RecorderState::IDLE || recorderState == RecorderState::CONFIGURED);
+	if (!canConfigure)
+		ImGui::BeginDisabled();
+
+	ImGui::Text("Buffer Settings:");
+	ImGui::Text("Samples:");
+	ImGui::SameLine();
+	ImGui::SetNextItemWidth(100);
+	int bufferSamples = static_cast<int>(settings.bufferSamples);
+	if (ImGui::InputInt("##samples", &bufferSamples, 100, 1000))
+	{
+		settings.bufferSamples = std::max(100, std::min(100000, bufferSamples));
+		if (recorderModule)
+		{
+			currentConfig.bufferSamples = settings.bufferSamples;
+			recorderModule->configure(currentConfig);
+		}
+	}
+
+	ImGui::Text("Rate (Hz):");
+	ImGui::SameLine();
+	ImGui::SetNextItemWidth(100);
+	int sampleRate = static_cast<int>(settings.sampleRateHz);
+	if (ImGui::InputInt("##rate", &sampleRate, 10, 100))
+	{
+		settings.sampleRateHz = std::max(1, std::min(10000, sampleRate));
+		if (recorderModule)
+		{
+			currentConfig.sampleRateHz = settings.sampleRateHz;
+			recorderModule->configure(currentConfig);
+		}
+	}
+
+	// Warning for high sample rates (software polling limitation)
+	if (settings.sampleRateHz > 4000)
+	{
+		ImGui::TextColored(ImVec4(1.0f, 0.5f, 0.0f, 1.0f), "⚠ SW polling ~3-4 kHz max");
+	}
+
+	ImGui::Text("Pre-Trigger:");
+	ImGui::SameLine();
+	ImGui::SetNextItemWidth(100);
+	int preTrigger = static_cast<int>(settings.preTriggerSamples);
+	if (ImGui::InputInt("##pretrigger", &preTrigger, 10, 100))
+	{
+		settings.preTriggerSamples = std::max(0, std::min(static_cast<int>(settings.bufferSamples), preTrigger));
+		if (recorderModule)
+		{
+			currentTrigger.preTriggerSamples = settings.preTriggerSamples;
+			recorderModule->setupTrigger(currentTrigger);
+		}
+	}
+	ImGui::SameLine();
+	ImGui::Text("samples");
+
+	if (!canConfigure)
+		ImGui::EndDisabled();
+
+	ImGui::Separator();
+
+	// Trigger configuration
+	ImGui::Text("Trigger Settings:");
+	const char* triggerTypes[] = {"None", "Edge", "Window", "Logic"};
+	ImGui::Text("Type:");
+	ImGui::SameLine();
+	ImGui::SetNextItemWidth(120);
+	ImGui::Combo("##trigtype", &settings.triggerType, triggerTypes, 4);
+
+	if (settings.triggerType != 0)
+	{
+		ImGui::Text("Variable:");
+		ImGui::SameLine();
+		ImGui::SetNextItemWidth(150);
+
+		// Create dropdown with variables from seriesMap
+		if (ImGui::BeginCombo("##trigvar", settings.triggerVariable.c_str()))
+		{
+			for (const auto& [varName, series] : seriesMap)
+			{
+				bool isSelected = (settings.triggerVariable == varName);
+				if (ImGui::Selectable(varName.c_str(), isSelected))
+					settings.triggerVariable = varName;
+				if (isSelected)
+					ImGui::SetItemDefaultFocus();
+			}
+			ImGui::EndCombo();
+		}
+
+		// Edge trigger specific controls
+		if (settings.triggerType == 1) // EDGE
+		{
+			ImGui::Text("Edge:");
+			ImGui::SameLine();
+			ImGui::SetNextItemWidth(120);
+			const char* edgeTypes[] = {"Rising", "Falling", "Both"};
+			ImGui::Combo("##edgetype", &settings.triggerCondition, edgeTypes, 3);
+		}
+
+		ImGui::Text("Threshold:");
+		ImGui::SameLine();
+		ImGui::SetNextItemWidth(100);
+		ImGui::InputDouble("##threshold", &settings.triggerValue1);
+	}
+
+	ImGui::Separator();
+
+	// Show added variables with visibility toggles
+	if (!seriesMap.empty())
+	{
+		ImGui::Text("Variables:");
+		for (auto& [varName, series] : seriesMap)
+		{
+			Variable::Color color = series->var->getColor();
+			ImVec4 col = {color.r, color.g, color.b, color.a};
+			ImGui::ColorButton(("##color_" + varName).c_str(), col, ImGuiColorEditFlags_NoInputs | ImGuiColorEditFlags_NoTooltip, ImVec2(10 * GuiHelper::contentScale, 10 * GuiHelper::contentScale));
+			ImGui::SameLine();
+			ImGui::Checkbox(varName.c_str(), &series->visible);
+		}
+	}
+
+	ImGui::Separator();
+
+	// Control buttons
+	if (recorderModule)
+	{
+		// Configure recorder with selected variables before arming
+		if (recorderState == RecorderState::IDLE || recorderState == RecorderState::CONFIGURED || recorderState == RecorderState::READY)
+		{
+			if (ImGui::Button("Arm Trigger", ImVec2(120, 25)))
+			{
+				// Ensure recorder is in clean state
+				if (recorderState != RecorderState::IDLE)
+				{
+					recorderModule->reset();
+				}
+
+				// Configure recorder with variables from this plot
+				RecorderConfig config;
+				config.bufferSamples = settings.bufferSamples;
+				config.sampleRateHz = settings.sampleRateHz;
+				config.useExternalSampling = true;  // Use ViewerDataHandler for sampling
+
+				for (const auto& [varName, series] : seriesMap)
+				{
+					config.addresses.push_back(series->var->getAddress());
+					config.sizes.push_back(series->var->getSize());
+				}
+
+				TriggerConfig trigger;
+				trigger.type = static_cast<TriggerType>(settings.triggerType);
+				trigger.condition = settings.triggerCondition;
+				trigger.preTriggerSamples = settings.preTriggerSamples;
+				trigger.value1 = settings.triggerValue1;
+
+				// Find trigger variable address
+				if (!settings.triggerVariable.empty() && seriesMap.count(settings.triggerVariable))
+				{
+					trigger.varAddress = seriesMap.at(settings.triggerVariable)->var->getAddress();
+				}
+
+				if (recorderModule->configure(config))
+				{
+					recorderModule->setupTrigger(trigger);
+					recorderModule->arm(TriggerMode::SINGLE_SHOT);
+
+					// Signal ViewerDataHandler to switch to recorder mode
+					viewerDataHandler->setState(DataHandlerBase::State::RUN);  // Ensure running
+				}
+			}
+		}
+		else if (recorderState == RecorderState::ARMED || recorderState == RecorderState::TRIGGERED)
+		{
+			if (ImGui::Button("Disarm", ImVec2(120, 25)))
+			{
+				recorderModule->disarm();
+			}
+			ImGui::SameLine();
+			if (ImGui::Button("Force Trigger", ImVec2(120, 25)))
+			{
+				recorderModule->forceTrigger();
+			}
+		}
+
+		if (recorderState == RecorderState::READY)
+		{
+			ImGui::SameLine();
+			if (ImGui::Button("Reset", ImVec2(120, 25)))
+			{
+				recorderModule->reset();
+			}
+		}
+
+		// Allow resetting from error state
+		if (recorderState == RecorderState::RECORDER_ERROR)
+		{
+			if (ImGui::Button("Clear Error", ImVec2(120, 25)))
+			{
+				recorderModule->reset();
+			}
+			if (ImGui::IsItemHovered())
+			{
+				ImGui::BeginTooltip();
+				ImGui::Text("Common causes:");
+				ImGui::BulletText("Debug probe disconnected");
+				ImGui::BulletText("Target not powered");
+				ImGui::BulletText("Invalid variable addresses");
+				ImGui::BulletText("Target halted or not running");
+				ImGui::EndTooltip();
+			}
+			ImGui::SameLine();
+			ImGui::TextColored(ImVec4(1.0f, 0.5f, 0.0f, 1.0f), "Click 'Clear Error' to retry");
+		}
+	}
+}
+
+void Gui::drawPlotRecorder(std::shared_ptr<Plot> plot)
+{
+	auto& settings = plot->getRecorderSettings();
+	auto& seriesMap = plot->getSeriesMap();
+	auto recorderModule = viewerDataHandler->getRecorderModule();
 
 	// Draw plot area
 	if (ImPlot::BeginPlot(plot->getName().c_str(), ImVec2(-1, -1), ImPlotFlags_NoChild))

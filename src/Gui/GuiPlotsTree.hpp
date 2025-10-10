@@ -12,10 +12,12 @@
 #include "PlotGroupHandler.hpp"
 #include "ViewerDataHandler.hpp"
 
+class Gui;  // Forward declaration
+
 class PlotsTree
 {
    public:
-	PlotsTree(ViewerDataHandler* viewerDataHandler, PlotHandler* plotHandler, PlotGroupHandler* plotGroupHandler, VariableHandler* variableHandler, std::shared_ptr<PlotEditWindow> plotEditWindow, IFileHandler* fileHandler, spdlog::logger* logger) : viewerDataHandler(viewerDataHandler), plotHandler(plotHandler), plotGroupHandler(plotGroupHandler), variableHandler(variableHandler), plotEditWindow(plotEditWindow), fileHandler(fileHandler), logger(logger)
+	PlotsTree(ViewerDataHandler* viewerDataHandler, PlotHandler* plotHandler, PlotGroupHandler* plotGroupHandler, VariableHandler* variableHandler, std::shared_ptr<PlotEditWindow> plotEditWindow, IFileHandler* fileHandler, spdlog::logger* logger, Gui* gui) : viewerDataHandler(viewerDataHandler), plotHandler(plotHandler), plotGroupHandler(plotGroupHandler), variableHandler(variableHandler), plotEditWindow(plotEditWindow), fileHandler(fileHandler), logger(logger), gui(gui)
 	{
 		groupEditWindow = std::make_unique<GroupEditWindow>(plotGroupHandler);
 	}
@@ -155,20 +157,29 @@ class PlotsTree
 			plt->statisticsSeries = 0;
 		}
 
-		/* Staticstics */
-		ImGui::BeginDisabled(plt->getType() != Plot::Type::CURVE);
-		bool mx0 = plt->markerX0.getState();
-		bool mx1 = plt->markerX1.getState();
-		ImGui::Text("x0 marker  ");
-		ImGui::SameLine();
-		ImGui::Checkbox("##mx0", &mx0);
-		plt->markerX0.setState(mx0);
-		ImGui::Text("x1 marker  ");
-		ImGui::SameLine();
-		ImGui::Checkbox("##mx1", &mx1);
-		plt->markerX1.setState(mx1);
-		statisticsWindow.drawAnalog(plt);
-		ImGui::EndDisabled();
+		/* Plot-specific controls */
+		if (plt->getType() == Plot::Type::RECORDER)
+		{
+			// Show recorder controls for recorder plots
+			gui->drawRecorderControls(plt);
+		}
+		else
+		{
+			// Show normal controls (x0/x1 markers, statistics) for other plot types
+			ImGui::BeginDisabled(plt->getType() != Plot::Type::CURVE);
+			bool mx0 = plt->markerX0.getState();
+			bool mx1 = plt->markerX1.getState();
+			ImGui::Text("x0 marker  ");
+			ImGui::SameLine();
+			ImGui::Checkbox("##mx0", &mx0);
+			plt->markerX0.setState(mx0);
+			ImGui::Text("x1 marker  ");
+			ImGui::SameLine();
+			ImGui::Checkbox("##mx1", &mx1);
+			plt->markerX1.setState(mx1);
+			statisticsWindow.drawAnalog(plt);
+			ImGui::EndDisabled();
+		}
 		ImGui::PopID();
 
 		/* Var list within plot*/
@@ -350,4 +361,5 @@ class PlotsTree
 	StatisticsWindow statisticsWindow;
 	IFileHandler* fileHandler;
 	spdlog::logger* logger;
+	Gui* gui;
 };
