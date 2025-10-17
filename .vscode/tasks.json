@@ -72,6 +72,35 @@
                 "cwd": "${workspaceFolder}\\build"
             },
             "problemMatcher": []
+        },
+        {
+            "type": "shell",
+            "label": "Build MCUViewer (macOS)",
+            "command": "mkdir -p build && cd build && cmake .. && make -j8",
+            "options": {
+                "cwd": "${workspaceFolder}"
+            },
+            "problemMatcher": ["$gcc"],
+            "group": "build"
+        },
+        {
+            "type": "shell",
+            "label": "Rebuild MCUViewer (macOS)",
+            "command": "rm -rf build && mkdir build && cd build && cmake .. && make -j8",
+            "options": {
+                "cwd": "${workspaceFolder}"
+            },
+            "problemMatcher": ["$gcc"],
+            "group": "build"
+        },
+        {
+            "type": "shell",
+            "label": "Run MCUViewer (macOS)",
+            "command": "${workspaceFolder}/build/MCUViewer",
+            "options": {
+                "cwd": "${workspaceFolder}/build"
+            },
+            "problemMatcher": []
         }
     ],
     "version": "2.0.0"
